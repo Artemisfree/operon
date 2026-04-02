@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OrderStatus {
+  pending
+  confirmed
+  preparing
+  ready_for_dispatch
+  on_the_way
+  delivered
+  cancelled
+
+  @@map("order_status")
+}
+
+model AdminUser {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         String   @default("admin")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("admin_users")
+}
+
+model Product {
+  id          String      @id @default(uuid()) @db.Uuid
+  name        String
+  description String?
+  price       Decimal     @db.Decimal(10, 2)
+  currency    String      @default("RUB")
+  isActive    Boolean     @default(true) @map("is_active")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+  orderItems  OrderItem[]
+
+  @@map("products")
+  @@unique([name])
+}
+
+model Order {
+  id              String               @id @default(uuid()) @db.Uuid
+  customerName    String               @map("customer_name")
+  customerPhone   String               @map("customer_phone")
+  deliveryAddress String               @map("delivery_address")
+  comment         String?
+  status          OrderStatus          @default(pending)
+  totalAmount     Decimal              @db.Decimal(10, 2) @map("total_amount")
+  createdAt       DateTime             @default(now()) @map("created_at")
+  updatedAt       DateTime             @updatedAt @map("updated_at")
+  items           OrderItem[]
+  statusHistory   OrderStatusHistory[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id         String   @id @default(uuid()) @db.Uuid
+  orderId    String   @db.Uuid @map("order_id")
+  productId  String   @db.Uuid @map("product_id")
+  quantity   Int
+  unitPrice  Decimal  @db.Decimal(10, 2) @map("unit_price")
+  createdAt  DateTime @default(now()) @map("created_at")
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_items")
+}
+
+model OrderStatusHistory {
+  id          String      @id @default(uuid()) @db.Uuid
+  orderId     String      @db.Uuid @map("order_id")
+  status      OrderStatus
+  changedBy   String?     @map("changed_by")
+  note        String?
+  createdAt   DateTime    @default(now()) @map("created_at")
+  order       Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, createdAt])
+  @@map("order_status_history")
+}

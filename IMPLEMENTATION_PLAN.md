@@ -111,6 +111,41 @@
 
 ## 7) Machine-executable roadmap для AI-агента
 
+## Текущий статус реализации (2026-04-02)
+
+### Phase A — Foundation
+- Статус: **в работе, основной backend-фундамент уже реализован**
+
+### Что уже сделано
+- Поднят backend skeleton на `NestJS + TypeScript`.
+- Локальная разработка переведена на `Docker Compose`.
+- Поднят `PostgreSQL` как отдельный контейнер.
+- Подключён `Prisma`.
+- Добавлены миграции и initial schema.
+- Созданы таблицы `admin_users`, `products`, `orders`, `order_items`, `order_status_history`.
+- Реализован минимальный `admin-auth` с login endpoint и `Bearer` token guard.
+- Реализован CRUD для `products`.
+- Реализован API для `orders`.
+- Реализован status workflow для заказа с проверкой допустимых переходов и записью в `order_status_history`.
+- Добавлены seed-данные: 1 admin user и demo products.
+- Добавлены integration tests для ключевых backend-потоков.
+- README обновлён под фактический способ запуска через Docker.
+
+### Что подтверждено
+- Контейнеры `api` и `postgres` поднимаются через Docker.
+- Миграция `20260402120000_init` применяется успешно.
+- Integration tests проходят зелёными:
+  - создание заказа;
+  - смена статуса заказа;
+  - запрет невалидного перехода статуса;
+  - защита admin endpoints;
+  - создание и чтение products под admin-auth.
+
+### Что ещё остаётся для полного закрытия Phase A
+- Добавить unit tests для моделей/валидации.
+- При желании вынести Prisma config из `package.json`, чтобы убрать deprecation warning Prisma 7.
+- После этого можно считать `Phase A` практически закрытым и переходить к `Phase B`.
+
 ## Phase A — Foundation (Week 1)
 ### Задачи
 - A1. Поднять backend + БД + миграции.
