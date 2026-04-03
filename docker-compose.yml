@@ -31,6 +31,11 @@ services:
       PORT: ${API_PORT:-3000}
       DATABASE_URL: ${DATABASE_URL:-postgresql://operon:operon@postgres:5432/operon?schema=public}
       JWT_SECRET: ${JWT_SECRET:-change-me}
+      AI_PROVIDER: ${AI_PROVIDER:-openai}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4.1-mini}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      OPENAI_TIMEOUT_SECONDS: ${OPENAI_TIMEOUT_SECONDS:-45}
     ports:
       - "${API_PORT:-3000}:3000"
     volumes:

@@ -1,0 +1,229 @@
+:root {
+  color-scheme: light;
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  color: #1f1a17;
+  background:
+    radial-gradient(circle at top left, rgba(209, 120, 42, 0.14), transparent 25%),
+    linear-gradient(180deg, #f7f2eb 0%, #f1e6db 100%);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+.admin-shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 20px;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.admin-auth-shell {
+  grid-template-columns: 1fr;
+  place-items: center;
+}
+
+.admin-auth-card,
+.admin-sidebar,
+.admin-main {
+  background: rgba(255, 250, 244, 0.94);
+  border-radius: 24px;
+  box-shadow: 0 20px 48px rgba(36, 22, 14, 0.12);
+  backdrop-filter: blur(10px);
+}
+
+.admin-auth-card {
+  width: min(100%, 420px);
+  padding: 28px;
+  display: grid;
+  gap: 14px;
+}
+
+.admin-auth-card label {
+  display: grid;
+  gap: 6px;
+}
+
+.admin-auth-card input,
+.admin-reply-form textarea {
+  border: 1px solid #d9c5b5;
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: #fffdf9;
+}
+
+.admin-auth-card button,
+.admin-sidebar-header button,
+.admin-actions button,
+.admin-reply-form button {
+  border: none;
+  border-radius: 999px;
+  padding: 12px 18px;
+  cursor: pointer;
+  background: #1f1a17;
+  color: #fff8f3;
+}
+
+.admin-eyebrow {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #8d5b3e;
+}
+
+.admin-sidebar {
+  padding: 18px;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 16px;
+}
+
+.admin-sidebar-header,
+.admin-main-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: start;
+}
+
+.admin-sidebar-header h1,
+.admin-main-header h2,
+.admin-main-header p {
+  margin: 0;
+}
+
+.admin-conversation-list {
+  display: grid;
+  gap: 10px;
+  overflow: auto;
+}
+
+.admin-conversation-item {
+  border: 1px solid #e4d1c2;
+  border-radius: 18px;
+  padding: 14px;
+  background: #fffdf9;
+  text-align: left;
+  cursor: pointer;
+}
+
+.admin-conversation-item-active {
+  border-color: #a45936;
+  background: #f9ecdf;
+}
+
+.admin-conversation-item p {
+  margin: 8px 0 0;
+  color: #695a4f;
+}
+
+.admin-conversation-topline {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+}
+
+.admin-badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.admin-badge-ai {
+  background: #efe2d2;
+  color: #7b4b31;
+}
+
+.admin-badge-operator {
+  background: #f8ded0;
+  color: #9d4328;
+}
+
+.admin-main {
+  padding: 20px;
+  display: grid;
+  grid-template-rows: auto 1fr auto auto;
+  gap: 16px;
+}
+
+.admin-message-list {
+  overflow: auto;
+  display: grid;
+  gap: 10px;
+}
+
+.admin-message {
+  max-width: 85%;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: #efe4d8;
+}
+
+.admin-message span {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #7b5f50;
+}
+
+.admin-message p {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.admin-message-user {
+  justify-self: end;
+  background: #1f1a17;
+  color: #fff5ec;
+}
+
+.admin-message-user span {
+  color: #d7c4b6;
+}
+
+.admin-message-operator {
+  background: #d76834;
+  color: #fffaf6;
+}
+
+.admin-message-operator span {
+  color: #ffd3bf;
+}
+
+.admin-reply-form {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-reply-form button {
+  justify-self: end;
+}
+
+.admin-empty,
+.admin-error {
+  color: #7f4a2a;
+}
+
+@media (max-width: 960px) {
+  .admin-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-sidebar {
+    min-height: 260px;
+  }
+}

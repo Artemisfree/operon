@@ -7,6 +7,9 @@ import { PrismaClient } from '@prisma/client';
 import { AppModule } from '../src/app.module.js';
 
 export async function createTestApp() {
+  process.env.AI_PROVIDER = 'mock';
+  process.env.OPENAI_API_KEY = '';
+
   const moduleRef = await Test.createTestingModule({
     imports: [AppModule],
   }).compile();
@@ -21,6 +24,9 @@ export async function createTestApp() {
 export async function resetDatabase() {
   const prisma = new PrismaClient();
 
+  await prisma.aiActionLog.deleteMany();
+  await prisma.message.deleteMany();
+  await prisma.conversation.deleteMany();
   await prisma.orderStatusHistory.deleteMany();
   await prisma.orderItem.deleteMany();
   await prisma.order.deleteMany();

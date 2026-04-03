@@ -219,4 +219,223 @@ describe('API integration', () => {
     assert.equal(listResponse.body.length, 1);
     assert.equal(listResponse.body[0].name, 'Круассан');
   });
+
+  it('creates an order through chat tool-calling', async () => {
+    await prisma.product.create({
+      data: {
+        name: 'Капучино 300 мл',
+        description: 'Классический капучино',
+        price: 220,
+        currency: 'RUB',
+      },
+    });
+
+    const response = await request(app.getHttpServer())
+      .post('/api/chat/message')
+      .send({
+        text: 'Хочу заказать 2 Капучино 300 мл. Телефон: +79990000000. Адрес: Москва, Тверская 1. Подтверждаю заказ.',
+        customer_meta: {
+          name: 'Иван',
+        },
+      })
+      .expect(201);
+
+    assert.equal(response.body.handoff_state, 'ai');
+    assert.match(response.body.reply, /Заказ оформлен/i);
+    assert.ok(response.body.agent_actions.length >= 1);
+    assert.ok(
+      response.body.agent_actions.some(
+        (action: { tool?: string }) => action.tool === 'create_order',
+      ),
+    );
+
+    const orders = await prisma.order.findMany();
+    assert.equal(orders.length, 1);
+    assert.equal(orders[0].customerName, 'Иван');
+
+    const actionLogs = await prisma.aiActionLog.findMany({
+      orderBy: { createdAt: 'asc' },
+    });
+    assert.ok(actionLogs.length >= 1);
+    assert.equal(actionLogs.at(-1)?.toolName, 'create_order');
+  });
+
+  it('does not create an order from chat without required fields', async () => {
+    await prisma.product.create({
+      data: {
+        name: 'Латте 400 мл',
+        description: 'Мягкий латте',
+        price: 260,
+        currency: 'RUB',
+      },
+    });
+
+    const response = await request(app.getHttpServer())
+      .post('/api/chat/message')
+      .send({
+        text: 'Хочу заказать 1 Латте 400 мл.',
+      })
+      .expect(201);
+
+    assert.match(response.body.reply, /нужны/i);
+    assert.equal(response.body.handoff_state, 'ai');
+
+    const orders = await prisma.order.findMany();
+    assert.equal(orders.length, 0);
+
+    const createOrderLogs = await prisma.aiActionLog.findMany({
+      where: { toolName: 'create_order' },
+    });
+    assert.equal(createOrderLogs.length, 0);
+  });
+
+  it('creates an order after a second explicit confirmation message', async () => {
+    await prisma.product.create({
+      data: {
+        name: 'Флэт уайт',
+        description: 'Кофе с молоком',
+        price: 240,
+        currency: 'RUB',
+      },
+    });
+
+    const firstResponse = await request(app.getHttpServer())
+      .post('/api/chat/message')
+      .send({
+        text: 'Хочу заказать 2 Флэт уайт. Телефон: +79995554433. Адрес: Москва, Петровка 10.',
+        customer_meta: {
+          name: 'Мария',
+        },
+      })
+      .expect(201);
+
+    assert.match(firstResponse.body.reply, /нужны|подтверж/i);
+
+    const secondResponse = await request(app.getHttpServer())
+      .post('/api/chat/message')
+      .send({
+        conversation_id: firstResponse.body.conversation_id,
+        text: 'Да, подтверждаю заказ.',
+      })
+      .expect(201);
+
+    assert.match(secondResponse.body.reply, /Заказ оформлен/i);
+    assert.equal(secondResponse.body.agent_actions.length, 1);
+    assert.equal(secondResponse.body.agent_actions[0].tool, 'create_order');
+
+    const orders = await prisma.order.findMany();
+    assert.equal(orders.length, 1);
+    assert.equal(orders[0].customerName, 'Мария');
+    assert.equal(orders[0].customerPhone, '+79995554433');
+  });
+
+  it('supports polling and operator handoff flow', async () => {
+    await prisma.product.create({
+      data: {
+        name: 'Раф 300 мл',
+        description: 'Сливочный кофе',
+        price: 250,
+        currency: 'RUB',
+      },
+    });
+
+    const passwordHash = await hash('admin12345', 10);
+    await prisma.adminUser.create({
+      data: {
+        email: 'operator@test.local',
+        passwordHash,
+      },
+    });
+
+    const loginResponse = await request(app.getHttpServer())
+      .post('/api/admin/auth/login')
+      .send({
+        email: 'operator@test.local',
+        password: 'admin12345',
+      })
+      .expect(201);
+
+    const token = loginResponse.body.accessToken;
+
+    const firstResponse = await request(app.getHttpServer())
+      .post('/api/chat/message')
+      .send({
+        text: 'Хочу заказать 1 Раф 300 мл. Телефон: +79997776655. Адрес: Москва, Арбат 5.',
+        customer_meta: {
+          name: 'Елена',
+        },
+      })
+      .expect(201);
+
+    const conversationId = firstResponse.body.conversation_id;
+
+    const messagesResponse = await request(app.getHttpServer())
+      .get(`/api/chat/conversations/${conversationId}/messages`)
+      .expect(200);
+
+    assert.ok(messagesResponse.body.messages.length >= 2);
+    assert.equal(messagesResponse.body.messages[0].role, 'user');
+    assert.ok(
+      messagesResponse.body.messages.some(
+        (message: { role?: string }) => message.role === 'assistant',
+      ),
+    );
+
+    const conversationsResponse = await request(app.getHttpServer())
+      .get('/api/admin/conversations')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    assert.equal(conversationsResponse.body.length, 1);
+    assert.equal(conversationsResponse.body[0].id, conversationId);
+
+    await request(app.getHttpServer())
+      .post(`/api/admin/conversations/${conversationId}/handoff/start`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(201);
+
+    const duringHandoffResponse = await request(app.getHttpServer())
+      .post('/api/chat/message')
+      .send({
+        conversation_id: conversationId,
+        text: 'Вы ещё на связи?',
+      })
+      .expect(201);
+
+    assert.equal(duringHandoffResponse.body.handoff_state, 'operator');
+    assert.equal(duringHandoffResponse.body.reply, '');
+
+    await request(app.getHttpServer())
+      .post(`/api/admin/conversations/${conversationId}/messages`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        text: 'Да, оператор на связи.',
+      })
+      .expect(201);
+
+    const detailsResponse = await request(app.getHttpServer())
+      .get(`/api/admin/conversations/${conversationId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    assert.equal(detailsResponse.body.handoffState, 'operator');
+    assert.equal(detailsResponse.body.messages.at(-1).role, 'operator');
+    assert.equal(detailsResponse.body.messages.at(-1).content, 'Да, оператор на связи.');
+
+    await request(app.getHttpServer())
+      .post(`/api/admin/conversations/${conversationId}/handoff/stop`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(201);
+
+    const afterReturnResponse = await request(app.getHttpServer())
+      .post('/api/chat/message')
+      .send({
+        conversation_id: conversationId,
+        text: 'Да, подтверждаю заказ.',
+      })
+      .expect(201);
+
+    assert.equal(afterReturnResponse.body.handoff_state, 'ai');
+    assert.match(afterReturnResponse.body.reply, /Заказ оформлен/i);
+  });
 });

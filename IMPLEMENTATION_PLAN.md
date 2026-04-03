@@ -111,10 +111,16 @@
 
 ## 7) Machine-executable roadmap для AI-агента
 
-## Текущий статус реализации (2026-04-02)
+## Текущий статус реализации (2026-04-03)
 
 ### Phase A — Foundation
-- Статус: **в работе, основной backend-фундамент уже реализован**
+- Статус: **реализован**
+
+### Phase B — AI Core
+- Статус: **реализован в MVP-виде**
+
+### Phase C — Website Chat + Handoff
+- Статус: **backend + frontend MVP slice реализован**
 
 ### Что уже сделано
 - Поднят backend skeleton на `NestJS + TypeScript`.
@@ -130,21 +136,75 @@
 - Добавлены seed-данные: 1 admin user и demo products.
 - Добавлены integration tests для ключевых backend-потоков.
 - README обновлён под фактический способ запуска через Docker.
+- Добавлен `ChatModule` с endpoint `POST /api/chat/message`.
+- Подключён AI orchestrator с поддержкой tool execution.
+- Добавлен OpenAI integration layer.
+- Добавлен `mock`-LLM режим для детерминированных integration tests.
+- Реализованы инструменты AI-агента:
+  - `find_product`
+  - `create_order`
+  - `get_order_status`
+  - `start_handoff`
+  - `append_operator_note`
+- Добавлены таблицы `conversations`, `messages`, `ai_action_logs`.
+- Подключён лог действий AI в `ai_action_logs`.
+- Добавлен polling endpoint для website widget: `GET /api/chat/conversations/:id/messages`.
+- Добавлены admin/operator endpoints для списка и карточки диалогов.
+- Добавлен operator reply endpoint.
+- Добавлен ручной handoff через admin endpoints.
+- AI перестаёт отправлять автоответы во время handoff.
+- После `handoff stop` управление корректно возвращается AI.
+- Добавлен frontend app `website-widget`.
+- Добавлен frontend app `admin-web`.
+- `website-widget` умеет:
+  - отправлять сообщения в backend;
+  - опрашивать историю сообщений;
+  - отображать handoff state;
+  - показывать operator replies.
+- `admin-web` умеет:
+  - выполнять login оператора;
+  - показывать список диалогов;
+  - открывать карточку диалога;
+  - включать и выключать handoff;
+  - отправлять сообщения оператора.
 
 ### Что подтверждено
 - Контейнеры `api` и `postgres` поднимаются через Docker.
 - Миграция `20260402120000_init` применяется успешно.
+- Миграция `20260403090000_phase_b_ai_core` применяется успешно.
 - Integration tests проходят зелёными:
   - создание заказа;
   - смена статуса заказа;
   - запрет невалидного перехода статуса;
   - защита admin endpoints;
   - создание и чтение products под admin-auth.
+  - создание заказа через `POST /api/chat/message`;
+  - regression: AI не создаёт заказ без обязательных полей.
+- Real OpenAI runtime подключён через `.env` и smoke-проверен:
+  - `AI_PROVIDER=openai` стартует корректно;
+  - `POST /api/chat/message` доходит до реального OpenAI API;
+  - tool-calling c `find_product` работает;
+  - guardrail на обязательное подтверждение соблюдается;
+  - двухшаговый сценарий `message -> confirmation -> create_order` проходит успешно;
+  - создан и подтверждён реальный order `080153b2-a772-4199-b6af-67840f76fb4e`.
+- Integration tests Phase C проходят зелёными:
+  - polling-style получение истории сообщений;
+  - список диалогов для operator/admin;
+  - operator handoff;
+  - operator manual reply;
+  - возврат чата AI после `handoff stop`.
+- Frontend verification проходит:
+  - `website-widget` unit test;
+  - `admin-web` unit test;
+  - typecheck обоих frontend apps;
+  - production build обоих frontend apps.
 
-### Что ещё остаётся для полного закрытия Phase A
+### Что ещё остаётся
 - Добавить unit tests для моделей/валидации.
 - При желании вынести Prisma config из `package.json`, чтобы убрать deprecation warning Prisma 7.
-- После этого можно считать `Phase A` практически закрытым и переходить к `Phase B`.
+- При желании можно ещё дополнительно дотюнить prompt, но критичный gap multi-turn подтверждения уже закрыт backend-логикой.
+- Для полного закрытия Phase C по исходному roadmap всё ещё нет realtime через WebSocket, пока используется polling.
+- Следующий этап по roadmap: `Phase D — Processing + Delivery`.
 
 ## Phase A — Foundation (Week 1)
 ### Задачи

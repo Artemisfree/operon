@@ -1,0 +1,170 @@
+:root {
+  color-scheme: light;
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  background:
+    radial-gradient(circle at top right, rgba(214, 98, 44, 0.18), transparent 28%),
+    linear-gradient(180deg, #f6efe7 0%, #efe4d8 100%);
+  color: #1f1a17;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+.widget-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: end;
+  padding: 24px;
+}
+
+.widget-launcher,
+.widget-form button,
+.widget-close {
+  border: none;
+  cursor: pointer;
+  border-radius: 999px;
+  background: #1f1a17;
+  color: #fff6ef;
+  font: inherit;
+}
+
+.widget-launcher {
+  padding: 14px 18px;
+  box-shadow: 0 18px 40px rgba(39, 28, 19, 0.24);
+}
+
+.widget-panel {
+  width: min(100%, 420px);
+  height: min(85vh, 720px);
+  display: grid;
+  grid-template-rows: auto auto auto 1fr auto auto;
+  gap: 12px;
+  padding: 18px;
+  border-radius: 24px;
+  background: rgba(255, 249, 243, 0.94);
+  box-shadow: 0 24px 60px rgba(48, 33, 21, 0.18);
+  backdrop-filter: blur(12px);
+}
+
+.widget-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 12px;
+}
+
+.widget-header h1,
+.widget-eyebrow {
+  margin: 0;
+}
+
+.widget-eyebrow {
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #8d5b3e;
+}
+
+.widget-close {
+  padding: 10px 14px;
+}
+
+.widget-name {
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.widget-name input,
+.widget-form textarea {
+  width: 100%;
+  border: 1px solid #d9c2af;
+  border-radius: 14px;
+  padding: 12px 14px;
+  box-sizing: border-box;
+  font: inherit;
+  background: #fffdf9;
+}
+
+.widget-banner {
+  padding: 12px 14px;
+  border-radius: 14px;
+  font-size: 14px;
+}
+
+.widget-banner-ai {
+  background: #f4e8d9;
+  color: #71472f;
+}
+
+.widget-banner-operator {
+  background: #fbe6d8;
+  color: #8d3b22;
+}
+
+.widget-messages {
+  overflow: auto;
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  padding-right: 4px;
+}
+
+.widget-empty {
+  color: #7b6d64;
+  font-size: 14px;
+}
+
+.widget-message {
+  max-width: 86%;
+  padding: 12px 14px;
+  border-radius: 16px;
+  line-height: 1.45;
+}
+
+.widget-message-user {
+  justify-self: end;
+  background: #1f1a17;
+  color: #fff5ec;
+}
+
+.widget-message-assistant {
+  justify-self: start;
+  background: #f0dfcf;
+}
+
+.widget-message-operator {
+  justify-self: start;
+  background: #d76834;
+  color: white;
+}
+
+.widget-form {
+  display: grid;
+  gap: 10px;
+}
+
+.widget-form button {
+  justify-self: end;
+  padding: 12px 18px;
+}
+
+.widget-error {
+  margin: 0;
+  color: #a83529;
+  font-size: 14px;
+}
+
+@media (max-width: 640px) {
+  .widget-shell {
+    padding: 12px;
+  }
+
+  .widget-panel {
+    width: 100%;
+    height: calc(100vh - 24px);
+    border-radius: 18px;
+  }
+}
