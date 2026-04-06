@@ -101,3 +101,109 @@ export async function stopHandoff(token: string, conversationId: string) {
     },
   });
 }
+
+async function adminRequest<T>(path: string, token: string, init?: RequestInit) {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...init?.headers,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Request failed with status ${response.status}`);
+  }
+
+  return (await response.json()) as T;
+}
+
+export type OrderRecord = {
+  id: string;
+  customerName: string;
+  customerPhone: string;
+  deliveryAddress: string;
+  comment: string | null;
+  status: string;
+  totalAmount: number;
+  createdAt: string;
+  updatedAt: string;
+  items: Array<{
+    id: string;
+    quantity: number;
+    unitPrice: number;
+    product: { id: string; name: string };
+  }>;
+  statusHistory: Array<{
+    id: string;
+    status: string;
+    note: string | null;
+    changedBy: string | null;
+    createdAt: string;
+  }>;
+  deliveryJob: null | {
+    id: string;
+    courierId: string;
+    assignedAt: string;
+    deliveredAt: string | null;
+    courier: {
+      id: string;
+      displayName: string;
+      phone: string | null;
+    };
+  };
+};
+
+export type CourierRecord = {
+  id: string;
+  displayName: string;
+  phone: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export async function listOrders(token: string) {
+  return adminRequest<OrderRecord[]>('/orders', token);
+}
+
+export async function getOrder(token: string, orderId: string) {
+  return adminRequest<OrderRecord>(`/orders/${orderId}`, token);
+}
+
+export async function updateOrderStatus(
+  token: string,
+  orderId: string,
+  status: string,
+  note?: string,
+) {
+  return adminRequest<OrderRecord>(`/orders/${orderId}/status`, token, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ status, note }),
+  });
+}
+
+export async function listCouriers(token: string) {
+  return adminRequest<CourierRecord[]>('/couriers', token);
+}
+
+export async function assignDelivery(
+  token: string,
+  orderId: string,
+  courierId: string,
+) {
+  return adminRequest<{ deliveryJob: { id: string; order: OrderRecord } }>(
+    '/delivery/assign',
+    token,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ orderId, courierId }),
+    },
+  );
+}

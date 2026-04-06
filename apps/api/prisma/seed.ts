@@ -4,6 +4,26 @@ import { PrismaClient, Prisma } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
+  const courierToken = 'courier-dev-token';
+  const courierTokenHash = await hash(courierToken, 10);
+
+  await prisma.courier.upsert({
+    where: { id: '00000000-0000-4000-8000-000000000001' },
+    update: {
+      displayName: 'Демо-курьер',
+      phone: '+79990001122',
+      isActive: true,
+      apiTokenHash: courierTokenHash,
+    },
+    create: {
+      id: '00000000-0000-4000-8000-000000000001',
+      displayName: 'Демо-курьер',
+      phone: '+79990001122',
+      isActive: true,
+      apiTokenHash: courierTokenHash,
+    },
+  });
+
   const passwordHash = await hash('admin12345', 10);
 
   await prisma.adminUser.upsert({

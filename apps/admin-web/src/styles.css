@@ -96,6 +96,23 @@ textarea {
   align-items: start;
 }
 
+.admin-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.admin-header-actions button {
+  border: none;
+  border-radius: 999px;
+  padding: 10px 14px;
+  cursor: pointer;
+  background: #ede4dc;
+  color: #1f1a17;
+  font-size: 13px;
+}
+
 .admin-sidebar-header h1,
 .admin-main-header h2,
 .admin-main-header p {
@@ -216,6 +233,105 @@ textarea {
 .admin-empty,
 .admin-error {
   color: #7f4a2a;
+}
+
+.admin-muted {
+  color: #695a4f;
+  font-size: 14px;
+}
+
+.admin-order-meta {
+  margin: 8px 0 0;
+  color: #695a4f;
+  font-size: 13px;
+}
+
+.admin-order-status-pill {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: #efe2d2;
+  color: #5c3d28;
+}
+
+.admin-order-address {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: #4a3d35;
+}
+
+.admin-order-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.admin-order-actions button {
+  border: none;
+  border-radius: 999px;
+  padding: 10px 14px;
+  cursor: pointer;
+  background: #ede4dc;
+  color: #1f1a17;
+  font-size: 13px;
+}
+
+.admin-assign-card {
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid #e4d1c2;
+  background: #fffdf9;
+}
+
+.admin-assign-card h3 {
+  margin: 0 0 8px;
+}
+
+.admin-assign-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.admin-assign-row select {
+  flex: 1;
+  min-width: 200px;
+  border: 1px solid #d9c5b5;
+  border-radius: 14px;
+  padding: 10px 12px;
+  background: #fffdf9;
+}
+
+.admin-assign-row button {
+  border: none;
+  border-radius: 999px;
+  padding: 12px 18px;
+  cursor: pointer;
+  background: #1f1a17;
+  color: #fff8f3;
+}
+
+.admin-delivery-info,
+.admin-order-items,
+.admin-order-history {
+  padding: 12px 0;
+}
+
+.admin-delivery-info h3,
+.admin-order-items h3,
+.admin-order-history h3 {
+  margin: 0 0 10px;
+  font-size: 16px;
+}
+
+.admin-order-items ul,
+.admin-order-history ul {
+  margin: 0;
+  padding-left: 18px;
+  line-height: 1.5;
 }
 
 @media (max-width: 960px) {

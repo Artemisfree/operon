@@ -174,6 +174,20 @@ export class OrdersService {
       statusHistory: {
         orderBy: { createdAt: 'asc' as const },
       },
+      deliveryJob: {
+        include: {
+          courier: {
+            select: {
+              id: true,
+              displayName: true,
+              phone: true,
+              isActive: true,
+              createdAt: true,
+              updatedAt: true,
+            },
+          },
+        },
+      },
     };
   }
 }

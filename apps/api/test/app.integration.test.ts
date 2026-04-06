@@ -438,4 +438,104 @@ describe('API integration', () => {
     assert.equal(afterReturnResponse.body.handoff_state, 'ai');
     assert.match(afterReturnResponse.body.reply, /Заказ оформлен/i);
   });
+
+  it('assigns a courier and completes the delivery workflow', async () => {
+    const passwordHash = await hash('admin12345', 10);
+    const admin = await prisma.adminUser.create({
+      data: {
+        email: 'dispatch@test.local',
+        passwordHash,
+      },
+    });
+
+    const courierToken = 'courier-integration-token';
+    const courierTokenHash = await hash(courierToken, 10);
+    const courier = await prisma.courier.create({
+      data: {
+        displayName: 'Курьер тест',
+        apiTokenHash: courierTokenHash,
+      },
+    });
+
+    const product = await prisma.product.create({
+      data: {
+        name: 'Delivery test product',
+        price: 100,
+        currency: 'RUB',
+      },
+    });
+
+    const order = await prisma.order.create({
+      data: {
+        customerName: 'Клиент',
+        customerPhone: '+79990000000',
+        deliveryAddress: 'Москва, Тестовая 1',
+        totalAmount: 100,
+        status: 'ready_for_dispatch',
+        items: {
+          create: {
+            productId: product.id,
+            quantity: 1,
+            unitPrice: 100,
+          },
+        },
+        statusHistory: {
+          create: {
+            status: 'ready_for_dispatch',
+            note: 'Ready for dispatch',
+          },
+        },
+      },
+    });
+
+    const loginResponse = await request(app.getHttpServer())
+      .post('/api/admin/auth/login')
+      .send({
+        email: admin.email,
+        password: 'admin12345',
+      })
+      .expect(201);
+
+    const adminToken = loginResponse.body.accessToken;
+
+    const assignResponse = await request(app.getHttpServer())
+      .post('/api/delivery/assign')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        orderId: order.id,
+        courierId: courier.id,
+      })
+      .expect(201);
+
+    assert.equal(assignResponse.body.deliveryJob.order.status, 'on_the_way');
+
+    const jobsResponse = await request(app.getHttpServer())
+      .get('/api/delivery/jobs')
+      .set('Authorization', `Bearer ${courierToken}`)
+      .expect(200);
+
+    assert.equal(jobsResponse.body.length, 1);
+    assert.equal(jobsResponse.body[0].order.status, 'on_the_way');
+
+    const jobId = jobsResponse.body[0].id as string;
+
+    await request(app.getHttpServer())
+      .post(`/api/delivery/${jobId}/proof-photo`)
+      .set('Authorization', `Bearer ${courierToken}`)
+      .send({
+        imageBase64: 'dGVzdA==',
+      })
+      .expect(201);
+
+    const deliveredResponse = await request(app.getHttpServer())
+      .post(`/api/delivery/${jobId}/status`)
+      .set('Authorization', `Bearer ${courierToken}`)
+      .send({
+        status: 'delivered',
+      })
+      .expect(201);
+
+    assert.equal(deliveredResponse.body.order.status, 'delivered');
+    assert.ok(deliveredResponse.body.deliveredAt);
+  });
 });

@@ -220,6 +220,11 @@ export class MockLlmService implements ChatLlmClient {
     const quantityMatch = text.match(/(?:заказать|нужно|хочу)\s+(\d+)/i);
     const phoneMatch = text.match(/(?:телефон|номер)\s*[:\-]?\s*(\+?[0-9()\-\s]{10,})/i);
     const addressMatch = text.match(/адрес\s*[:\-]?\s*([^.\n]+)/i);
+    let productQuery = extractProductQueryFromText(text);
+    // Ответ только названием товара («Капучино 300 мл») без «хочу заказать» не ловится regex — подставляем префикс.
+    if (!productQuery && text.trim()) {
+      productQuery = extractProductQueryFromText(`хочу ${text.trim()}`);
+    }
     return {
       customerName:
         typeof customerMeta?.name === 'string' ? customerMeta.name : 'Гость',
@@ -227,7 +232,7 @@ export class MockLlmService implements ChatLlmClient {
         customerPhone:
           typeof customerMeta?.phone === 'string' ? customerMeta.phone : '',
       }),
-      productQuery: extractProductQueryFromText(text),
+      productQuery,
       confirmed: isExplicitConfirmation(text),
     };
   }

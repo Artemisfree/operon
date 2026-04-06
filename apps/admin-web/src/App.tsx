@@ -11,8 +11,10 @@ import {
   type ConversationListItem,
 } from './api';
 import { clearToken, loadToken, storeToken } from './auth';
+import { OrdersView } from './OrdersView';
 
 export function App() {
+  const [view, setView] = useState<'chats' | 'orders'>('chats');
   const [token, setToken] = useState<string | null>(() => loadToken());
   const [email, setEmail] = useState('admin@operon.local');
   const [password, setPassword] = useState('admin12345');
@@ -122,6 +124,14 @@ export function App() {
     setConversations(await listConversations(token));
   };
 
+  const handleLogout = () => {
+    clearToken();
+    setToken(null);
+    setDetails(null);
+    setSelectedId(null);
+    setView('chats');
+  };
+
   if (!token) {
     return (
       <main className="admin-shell admin-auth-shell">
@@ -147,6 +157,18 @@ export function App() {
     );
   }
 
+  if (view === 'orders') {
+    return (
+      <main className="admin-shell">
+        <OrdersView
+          token={token}
+          onOpenChats={() => setView('chats')}
+          onLogout={handleLogout}
+        />
+      </main>
+    );
+  }
+
   return (
     <main className="admin-shell">
       <aside className="admin-sidebar">
@@ -155,17 +177,14 @@ export function App() {
             <p className="admin-eyebrow">Operon</p>
             <h1>Диалоги</h1>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              clearToken();
-              setToken(null);
-              setDetails(null);
-              setSelectedId(null);
-            }}
-          >
-            Выйти
-          </button>
+          <div className="admin-header-actions">
+            <button type="button" onClick={() => setView('orders')}>
+              Заказы
+            </button>
+            <button type="button" onClick={handleLogout}>
+              Выйти
+            </button>
+          </div>
         </header>
 
         <div className="admin-conversation-list">

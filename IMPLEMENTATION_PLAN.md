@@ -85,6 +85,8 @@
 
 ### Dispatch
 - `POST /api/delivery/assign`
+- `GET /api/delivery/jobs` (курьер, Bearer-токен)
+- `GET /api/couriers` (admin)
 - `POST /api/delivery/:id/status`
 - `POST /api/delivery/:id/proof-photo`
 
@@ -111,7 +113,7 @@
 
 ## 7) Machine-executable roadmap для AI-агента
 
-## Текущий статус реализации (2026-04-03)
+## Текущий статус реализации (2026-04-06)
 
 ### Phase A — Foundation
 - Статус: **реализован**
@@ -121,6 +123,9 @@
 
 ### Phase C — Website Chat + Handoff
 - Статус: **backend + frontend MVP slice реализован**
+
+### Phase D — Processing + Delivery
+- Статус: **реализован в MVP-виде** (backend + admin-web + courier-web)
 
 ### Что уже сделано
 - Поднят backend skeleton на `NestJS + TypeScript`.
@@ -167,11 +172,28 @@
   - открывать карточку диалога;
   - включать и выключать handoff;
   - отправлять сообщения оператора.
+- Миграция `20260406120000_phase_d_delivery`: таблицы `couriers`, `delivery_jobs`; заказ связан с доставкой (`deliveryJob`).
+- API доставки: `POST /api/delivery/assign` (admin), `GET /api/delivery/jobs`, `POST /api/delivery/:id/status`, `POST /api/delivery/:id/proof-photo` (курьер по Bearer-токену); `GET /api/couriers` (admin).
+- `CourierAuthGuard`: сопоставление Bearer-токена с `bcrypt`-хэшем в БД (перебор активных курьеров, MVP-масштаб).
+- Seed: демо-курьер и токен `courier-dev-token` (см. `prisma/seed.ts`).
+- Integration test: сценарий `assign → on_the_way → proof → delivered`.
+- Тесты: unit (`delivery.schemas`, Zod), расширенные integration по доставке/курьерам (`test/delivery.integration.test.ts`); фронт — Vitest (`orderWorkflow`, нормализация API URL, auth-константы). `pnpm --filter @operon/api test:unit` без Postgres; полный `test` / `test:integration` — с БД (см. README).
+- `admin-web`: раздел **«Заказы»** — список, карточка, смена статуса по workflow, **назначение курьера** для `ready_for_dispatch`.
+- Frontend app **`courier-web`**: ввод токена, список доставок, загрузка фото подтверждения, кнопка «Доставлено».
+- **CORS** (`apps/api/src/main.ts`): для dev разрешены origin `http://localhost:3001–3003` и `http://127.0.0.1:3001–3003`; для других URL — env **`CORS_ORIGINS`** (через запятую). Иначе браузер блокирует login с Vite на другом порту.
+- **Postgres с хоста:** внешний порт **9432** (`POSTGRES_PORT` в `docker-compose`); для Prisma/CLI на машине — `DATABASE_URL` с `127.0.0.1:9432` (см. `.env.example`). У сервиса `api` в compose задан свой внутренний `DATABASE_URL` на `postgres:5432`, чтобы не путать с URL для хоста.
+- **Mock-LLM** (`mock-llm.service.ts`): если из ответа пользователя не извлекается товар по regex, выполняется fallback `хочу <текст пользователя>`, чтобы короткий ответ («Капучино 300 мл») не зацикливал фразу «Уточните товар».
+- **Скрипты тестов API:** `pnpm --filter @operon/api test:unit` — только Zod, без БД; `test:integration` — integration; полный `test` — всё вместе (см. README).
+
+### Соответствие презентации (operon - deck.pdf)
+- Совпадает: intake с AI + **ручной перехват оператором**, БД заказов/статусов, **доставка и proof**, **review после доставки** (review — Phase E в плане).
+- Узкий MVP в коде: канал **только Website** (в deck — также WhatsApp/Telegram); уведомления курьерам в мессенджерах **не** делались — вместо этого **`courier-web`** и те же API.
 
 ### Что подтверждено
 - Контейнеры `api` и `postgres` поднимаются через Docker.
 - Миграция `20260402120000_init` применяется успешно.
 - Миграция `20260403090000_phase_b_ai_core` применяется успешно.
+- Миграция `20260406120000_phase_d_delivery` применяется успешно.
 - Integration tests проходят зелёными:
   - создание заказа;
   - смена статуса заказа;
@@ -198,13 +220,22 @@
   - `admin-web` unit test;
   - typecheck обоих frontend apps;
   - production build обоих frontend apps.
+- После добавления `courier-web`: typecheck и production build для трёх frontend apps (widget, admin, courier).
 
 ### Что ещё остаётся
 - Добавить unit tests для моделей/валидации.
 - При желании вынести Prisma config из `package.json`, чтобы убрать deprecation warning Prisma 7.
 - При желании можно ещё дополнительно дотюнить prompt, но критичный gap multi-turn подтверждения уже закрыт backend-логикой.
 - Для полного закрытия Phase C по исходному roadmap всё ещё нет realtime через WebSocket, пока используется polling.
-- Следующий этап по roadmap: `Phase D — Processing + Delivery`.
+- Следующий этап по roadmap: **`Phase E — Review + Stabilization`** (планировщик review request, метрики, hardening).
+- **Продуктовые хвосты (не блокируют Phase E, но в бэклоге):** человекочитаемый номер заказа для клиента (вместо UUID в тексте бота); при необходимости — CRUD каталога в UI admin-web (API уже есть).
+
+### 7.1 Handoff для следующей сессии
+- **Сделано по ветке MVP:** Phase A–D в объёме выше; сиды: admin `admin@operon.local`, товары, курьер + `courier-dev-token`.
+- **Дев-порты:** API `3000`, widget `3001`, admin `3002`, courier `3003` (Vite `dev`, не прод).
+- **Запуск:** `docker compose up -d` (Postgres + api); при необходимости `docker compose exec api pnpm --filter @operon/api prisma:seed`; фронты локально `pnpm --filter @operon/<app> dev` или внутри контейнера api (см. README).
+- **LLM:** `AI_PROVIDER=openai` + ключ — реальный OpenAI; `mock` — без сети, детерминированный сценарий.
+- **Следующий шаг кода:** Phase E (review + jobs queue + метрики по плану), таблица `review_requests` в схеме пока не реализована.
 
 ## Phase A — Foundation (Week 1)
 ### Задачи

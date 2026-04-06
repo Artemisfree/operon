@@ -49,25 +49,47 @@ curl http://localhost:3000/api/health
 docker compose exec api pnpm --filter @operon/api prisma:seed
 ```
 
-6. Прогнать integration tests:
+6. Прогнать тесты API (нужен доступ к Postgres, тот же `DATABASE_URL`, что в контейнере `api`):
 
 ```bash
 docker compose exec -T api pnpm --filter @operon/api test
+```
+
+Локально без Docker (только быстрые unit-тесты схем Zod, без БД):
+
+```bash
+pnpm --filter @operon/api test:unit
+```
+
+Полный набор integration-тестов вне Docker (нужен запущенный Postgres, например `DATABASE_URL` с `127.0.0.1:9432`):
+
+```bash
+pnpm --filter @operon/api test:integration
+```
+
+Тесты фронтендов (Vitest, без backend):
+
+```bash
+pnpm --filter @operon/admin-web test
+pnpm --filter @operon/courier-web test
+pnpm --filter @operon/website-widget test
 ```
 
 ## Local Dev
 
 - API base URL: `http://localhost:3000/api`
 - Healthcheck: `GET /api/health`
-- Postgres host from Docker network: `postgres:5432`
-- Postgres host from local machine: `localhost:5432`
+- Postgres host from Docker network: `postgres:5432` (внутри compose)
+- Postgres host from local machine: `localhost:9432` (проброс по умолчанию в `docker-compose.yml`)
 - Widget dev URL: `http://localhost:3001`
 - Admin dev URL: `http://localhost:3002`
+- Courier dev URL: `http://localhost:3003`
 
 ## Frontend Apps
 
-- [website-widget](/Users/artemnadtoceev/dev/operon/apps/website-widget) - клиентский чат-виджет
-- [admin-web](/Users/artemnadtoceev/dev/operon/apps/admin-web) - операторская панель
+- [website-widget](apps/website-widget) — клиентский чат-виджет
+- [admin-web](apps/admin-web) — операторская панель (диалоги + заказы/доставка)
+- [courier-web](apps/courier-web) — курьерский web (токен, доставки, фото, «Доставлено»)
 
 Локальный запуск:
 
@@ -75,6 +97,7 @@ docker compose exec -T api pnpm --filter @operon/api test
 docker compose up -d
 docker compose exec api pnpm --filter @operon/website-widget dev
 docker compose exec api pnpm --filter @operon/admin-web dev
+docker compose exec api pnpm --filter @operon/courier-web dev
 ```
 
 Если нужен явный backend URL для Vite:
