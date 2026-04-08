@@ -11,10 +11,11 @@ import {
   type ConversationListItem,
 } from './api';
 import { clearToken, loadToken, storeToken } from './auth';
+import { MetricsView } from './MetricsView';
 import { OrdersView } from './OrdersView';
 
 export function App() {
-  const [view, setView] = useState<'chats' | 'orders'>('chats');
+  const [view, setView] = useState<'chats' | 'orders' | 'metrics'>('chats');
   const [token, setToken] = useState<string | null>(() => loadToken());
   const [email, setEmail] = useState('admin@operon.local');
   const [password, setPassword] = useState('admin12345');
@@ -163,9 +164,21 @@ export function App() {
         <OrdersView
           token={token}
           onOpenChats={() => setView('chats')}
+          onOpenMetrics={() => setView('metrics')}
           onLogout={handleLogout}
         />
       </main>
+    );
+  }
+
+  if (view === 'metrics') {
+    return (
+      <MetricsView
+        token={token}
+        onOpenChats={() => setView('chats')}
+        onOpenOrders={() => setView('orders')}
+        onLogout={handleLogout}
+      />
     );
   }
 
@@ -180,6 +193,9 @@ export function App() {
           <div className="admin-header-actions">
             <button type="button" onClick={() => setView('orders')}>
               Заказы
+            </button>
+            <button type="button" onClick={() => setView('metrics')}>
+              Метрики
             </button>
             <button type="button" onClick={handleLogout}>
               Выйти

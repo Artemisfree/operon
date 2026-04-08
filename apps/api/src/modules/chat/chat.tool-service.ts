@@ -17,6 +17,7 @@ type CreateOrderToolInput = {
   deliveryAddress: string;
   comment?: string;
   confirmed: boolean;
+  conversationId?: string;
   items: Array<{
     productQuery: string;
     quantity: number;
@@ -89,8 +90,15 @@ export class ChatToolService {
         );
       }
 
+      const matchedProduct = matches[0];
+      if (!matchedProduct) {
+        throw new NotFoundException(
+          `No product found for query "${item.productQuery}"`,
+        );
+      }
+
       resolvedItems.push({
-        productId: matches[0].id,
+        productId: matchedProduct.id,
         quantity: item.quantity,
       });
     }
@@ -100,6 +108,7 @@ export class ChatToolService {
       customerPhone: input.customerPhone,
       deliveryAddress: input.deliveryAddress,
       comment: input.comment,
+      conversationId: input.conversationId,
       items: resolvedItems,
     });
   }

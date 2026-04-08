@@ -65,6 +65,8 @@ pnpm --filter @operon/api test:unit
 
 ```bash
 pnpm --filter @operon/api test:integration
+
+Integration-файлы запускаются **последовательно** (`--test-concurrency=1`), чтобы не гонять одну БД из нескольких процессов. Для Prisma/JWT в тестах см. дефолты в `apps/api/test/helpers.ts` или задайте `DATABASE_URL` / `JWT_SECRET` в окружении.
 ```
 
 Тесты фронтендов (Vitest, без backend):
@@ -118,6 +120,7 @@ VITE_API_BASE_URL=http://localhost:3000/api
 - `AI_PROVIDER` - `openai` для реального LLM или `mock` для тестов/локальной отладки
 - `OPENAI_API_KEY` - ключ OpenAI API
 - `OPENAI_MODEL` - модель OpenAI для chat orchestration
+- `REVIEW_DELAY_MINUTES` - через сколько минут после статуса `delivered` отправить в чат просьбу об отзыве (если у заказа есть `conversation_id`)
 
 ## Migrations
 

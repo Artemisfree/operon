@@ -127,6 +127,9 @@
 ### Phase D — Processing + Delivery
 - Статус: **реализован в MVP-виде** (backend + admin-web + courier-web)
 
+### Phase E — Review + Stabilization
+- Статус: **реализован в MVP-виде** (backend + admin-web метрики)
+
 ### Что уже сделано
 - Поднят backend skeleton на `NestJS + TypeScript`.
 - Локальная разработка переведена на `Docker Compose`.
@@ -184,6 +187,7 @@
 - **Postgres с хоста:** внешний порт **9432** (`POSTGRES_PORT` в `docker-compose`); для Prisma/CLI на машине — `DATABASE_URL` с `127.0.0.1:9432` (см. `.env.example`). У сервиса `api` в compose задан свой внутренний `DATABASE_URL` на `postgres:5432`, чтобы не путать с URL для хоста.
 - **Mock-LLM** (`mock-llm.service.ts`): если из ответа пользователя не извлекается товар по regex, выполняется fallback `хочу <текст пользователя>`, чтобы короткий ответ («Капучино 300 мл») не зацикливал фразу «Уточните товар».
 - **Скрипты тестов API:** `pnpm --filter @operon/api test:unit` — только Zod, без БД; `test:integration` — integration; полный `test` — всё вместе (см. README).
+- **Phase E — review:** миграция `20260406180000_phase_e_review`: таблица `review_requests`; у заказа опционально `conversation_id` (связь с чатом, проставляется при `create_order` из виджета). После `delivered` (курьер или admin status) создаётся запись review с `scheduled_at = now + REVIEW_DELAY_MINUTES` (env, по умолчанию 7). Раз в минуту cron обрабатывает просроченные `scheduled` записи: в чат уходит сообщение assistant с просьбой об отзыве; без диалога — статус `skipped_no_conversation`. Idempotency: одна запись на заказ. API: `POST /api/review/schedule`, `POST /api/review/send` (admin JWT); `GET /api/admin/metrics` — заказы, delivered %, handoff % (диалоги с хотя бы одним сообщением оператора), число отправленных review. **admin-web:** экран «Метрики».
 
 ### Соответствие презентации (operon - deck.pdf)
 - Совпадает: intake с AI + **ручной перехват оператором**, БД заказов/статусов, **доставка и proof**, **review после доставки** (review — Phase E в плане).
@@ -227,15 +231,16 @@
 - При желании вынести Prisma config из `package.json`, чтобы убрать deprecation warning Prisma 7.
 - При желании можно ещё дополнительно дотюнить prompt, но критичный gap multi-turn подтверждения уже закрыт backend-логикой.
 - Для полного закрытия Phase C по исходному roadmap всё ещё нет realtime через WebSocket, пока используется polling.
-- Следующий этап по roadmap: **`Phase E — Review + Stabilization`** (планировщик review request, метрики, hardening).
-- **Продуктовые хвосты (не блокируют Phase E, но в бэклоге):** человекочитаемый номер заказа для клиента (вместо UUID в тексте бота); при необходимости — CRUD каталога в UI admin-web (API уже есть).
+- **Phase E (MVP):** закрыт по review + метрикам; дальше — полировка, observability, e2e-smoke по полному циклу при необходимости.
+- **Продуктовые хвосты (бэклог):** человекочитаемый номер заказа для клиента (вместо UUID в тексте бота); CRUD каталога в UI admin-web (API уже есть); отдельный канал review (SMS/email) вне чата — не в MVP.
 
 ### 7.1 Handoff для следующей сессии
-- **Сделано по ветке MVP:** Phase A–D в объёме выше; сиды: admin `admin@operon.local`, товары, курьер + `courier-dev-token`.
+- **Сделано по ветке MVP:** Phase A–E в объёме выше; сиды: admin `admin@operon.local`, товары, курьер + `courier-dev-token`.
 - **Дев-порты:** API `3000`, widget `3001`, admin `3002`, courier `3003` (Vite `dev`, не прод).
 - **Запуск:** `docker compose up -d` (Postgres + api); при необходимости `docker compose exec api pnpm --filter @operon/api prisma:seed`; фронты локально `pnpm --filter @operon/<app> dev` или внутри контейнера api (см. README).
 - **LLM:** `AI_PROVIDER=openai` + ключ — реальный OpenAI; `mock` — без сети, детерминированный сценарий.
-- **Следующий шаг кода:** Phase E (review + jobs queue + метрики по плану), таблица `review_requests` в схеме пока не реализована.
+- **Review:** `REVIEW_DELAY_MINUTES` (по умолчанию 7); после `delivered` планируется сообщение в чат; админ: «Метрики», API `GET /api/admin/metrics`, ручной прогон очереди `POST /api/review/send`.
+- **Следующий шаг кода (по желанию):** e2e-smoke «чат → заказ → доставка → review»; WebSocket вместо polling; продуктовые хвосты из бэклога.
 
 ## Phase A — Foundation (Week 1)
 ### Задачи
@@ -306,6 +311,11 @@
 ### Тест-гейт
 - integration: delay job отрабатывает один раз (idempotency).
 - smoke: полный сценарий от чата до review.
+
+### Статус реализации (MVP)
+- E1: cron `EVERY_MINUTE` + `review_requests`, env `REVIEW_DELAY_MINUTES` (по умолчанию 7); сообщение в чат для заказов с `conversation_id`.
+- E2: `GET /api/admin/metrics` + экран «Метрики» в admin-web.
+- E3: минимальный hardening (типизация OpenAI guard, дубликат import в products.service); полный e2e-smoke — отдельно.
 
 ---
 

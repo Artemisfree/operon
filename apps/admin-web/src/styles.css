@@ -343,3 +343,60 @@ textarea {
     min-height: 260px;
   }
 }
+
+.admin-metrics-hint {
+  padding: 0 16px 8px;
+  font-size: 13px;
+  color: #695a4f;
+}
+
+.admin-metrics-refresh {
+  margin: 0 16px 16px;
+  align-self: flex-start;
+  border: none;
+  border-radius: 999px;
+  padding: 10px 14px;
+  cursor: pointer;
+  background: #ede4dc;
+  color: #1f1a17;
+  font-size: 13px;
+}
+
+.admin-metrics-main {
+  padding: 20px;
+}
+
+.admin-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.admin-metric-card {
+  background: #fffdf9;
+  border: 1px solid #e4d1c2;
+  border-radius: 18px;
+  padding: 16px 18px;
+}
+
+.admin-metric-card h2 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #695a4f;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.admin-metric-value {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: #1f1a17;
+}
+
+.admin-metric-sub {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: #695a4f;
+}

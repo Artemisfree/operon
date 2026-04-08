@@ -13,10 +13,11 @@ import { nextAdminStatuses, ORDER_STATUS_LABEL } from './orderWorkflow';
 type Props = {
   token: string;
   onOpenChats: () => void;
+  onOpenMetrics?: () => void;
   onLogout: () => void;
 };
 
-export function OrdersView({ token, onOpenChats, onLogout }: Props) {
+export function OrdersView({ token, onOpenChats, onOpenMetrics, onLogout }: Props) {
   const [orders, setOrders] = useState<OrderRecord[]>([]);
   const [couriers, setCouriers] = useState<CourierRecord[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -66,6 +67,11 @@ export function OrdersView({ token, onOpenChats, onLogout }: Props) {
             <button type="button" onClick={onOpenChats}>
               Диалоги
             </button>
+            {onOpenMetrics ? (
+              <button type="button" onClick={onOpenMetrics}>
+                Метрики
+              </button>
+            ) : null}
             <button type="button" onClick={onLogout}>
               Выйти
             </button>

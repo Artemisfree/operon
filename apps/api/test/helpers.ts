@@ -9,6 +9,13 @@ import { AppModule } from '../src/app.module.js';
 export async function createTestApp() {
   process.env.AI_PROVIDER = 'mock';
   process.env.OPENAI_API_KEY = '';
+  if (!process.env.DATABASE_URL) {
+    process.env.DATABASE_URL =
+      'postgresql://operon:operon@127.0.0.1:9432/operon?schema=public';
+  }
+  if (!process.env.JWT_SECRET) {
+    process.env.JWT_SECRET = 'test-jwt-secret';
+  }
 
   const moduleRef = await Test.createTestingModule({
     imports: [AppModule],
@@ -26,6 +33,7 @@ export async function resetDatabase() {
 
   await prisma.aiActionLog.deleteMany();
   await prisma.message.deleteMany();
+  await prisma.reviewRequest.deleteMany();
   await prisma.conversation.deleteMany();
   await prisma.orderStatusHistory.deleteMany();
   await prisma.orderItem.deleteMany();

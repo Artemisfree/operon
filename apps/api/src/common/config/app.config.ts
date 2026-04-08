@@ -16,4 +16,7 @@ export const appConfig = () => ({
     openaiBaseUrl: process.env.OPENAI_BASE_URL ?? 'https://api.openai.com/v1',
     openaiTimeoutSeconds: Number(process.env.OPENAI_TIMEOUT_SECONDS ?? 45),
   },
+  review: {
+    delayMinutes: Number(process.env.REVIEW_DELAY_MINUTES ?? 7),
+  },
 });

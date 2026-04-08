@@ -44,6 +44,15 @@ enum AiActionStatus {
   @@map("ai_action_status")
 }
 
+enum ReviewRequestStatus {
+  scheduled
+  sent
+  skipped_no_conversation
+  failed
+
+  @@map("review_request_status")
+}
+
 model AdminUser {
   id           String   @id @default(uuid()) @db.Uuid
   email        String   @unique
@@ -64,6 +73,8 @@ model Conversation {
   updatedAt    DateTime      @updatedAt @map("updated_at")
   messages     Message[]
   aiActionLogs AiActionLog[]
+  orders       Order[]
+  reviewRequests ReviewRequest[]
 
   @@map("conversations")
 }
@@ -121,13 +132,34 @@ model Order {
   comment         String?
   status          OrderStatus          @default(pending)
   totalAmount     Decimal              @db.Decimal(10, 2) @map("total_amount")
+  conversationId  String?              @map("conversation_id") @db.Uuid
   createdAt       DateTime             @default(now()) @map("created_at")
   updatedAt       DateTime             @updatedAt @map("updated_at")
   items           OrderItem[]
   statusHistory   OrderStatusHistory[]
   deliveryJob     DeliveryJob?
+  conversation    Conversation?      @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  reviewRequest   ReviewRequest?
 
+  @@index([conversationId])
   @@map("orders")
+}
+
+model ReviewRequest {
+  id               String               @id @default(uuid()) @db.Uuid
+  orderId          String               @unique @map("order_id") @db.Uuid
+  conversationId   String?              @map("conversation_id") @db.Uuid
+  status           ReviewRequestStatus  @default(scheduled)
+  scheduledAt      DateTime             @map("scheduled_at")
+  sentAt           DateTime?            @map("sent_at")
+  errorMessage     String?              @map("error_message")
+  createdAt        DateTime             @default(now()) @map("created_at")
+  updatedAt        DateTime             @updatedAt @map("updated_at")
+  order            Order                @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  conversation     Conversation?        @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+
+  @@index([status, scheduledAt])
+  @@map("review_requests")
 }
 
 model Courier {

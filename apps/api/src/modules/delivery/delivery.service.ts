@@ -8,6 +8,7 @@ import { OrderStatus } from '@prisma/client';
 
 import { serializeValue } from '../../common/serialization.js';
 import { PrismaService } from '../db/prisma.service.js';
+import { ReviewService } from '../review/review.service.js';
 import type { AssignDeliveryInput, ProofPhotoInput } from './delivery.schemas.js';
 
 const courierPublicSelect = {
@@ -21,7 +22,10 @@ const courierPublicSelect = {
 
 @Injectable()
 export class DeliveryService {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(ReviewService) private readonly reviewService: ReviewService,
+  ) {}
 
   async assign(input: AssignDeliveryInput, changedBy?: string) {
     const order = await this.prisma.order.findUnique({
@@ -180,6 +184,8 @@ export class DeliveryService {
         },
       });
     });
+
+    await this.reviewService.scheduleReviewForOrder(job.orderId);
 
     return serializeValue(updated);
   }

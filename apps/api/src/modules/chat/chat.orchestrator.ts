@@ -69,9 +69,16 @@ export class ChatOrchestratorService {
 
       for (const toolCall of initialResponse.toolCalls) {
         try {
+          const toolArgs =
+            toolCall.name === 'create_order'
+              ? {
+                  ...toolCall.arguments,
+                  conversationId: conversation.id,
+                }
+              : toolCall.arguments;
           const result = await this.chatToolService.executeTool(
             toolCall.name,
-            toolCall.arguments,
+            toolArgs,
           );
 
           const serializedResult = serializeValue(result);
@@ -263,9 +270,10 @@ export class ChatOrchestratorService {
           : conversation.customerPhone,
     });
     const matchedProducts = toolPayload?.result ?? [];
+    const singleMatch = matchedProducts[0];
     const productQuery =
-      matchedProducts.length === 1 && matchedProducts[0].name
-        ? matchedProducts[0].name
+      matchedProducts.length === 1 && singleMatch?.name
+        ? singleMatch.name
         : extractProductQueryFromText(aggregatedUserText);
 
     if (
@@ -285,6 +293,7 @@ export class ChatOrchestratorService {
       customerPhone: orderContext.customerPhone,
       deliveryAddress: orderContext.deliveryAddress,
       confirmed: true,
+      conversationId: conversation.id,
       items: [
         {
           productQuery,

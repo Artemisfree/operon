@@ -23,7 +23,8 @@ export class AdminAuthGuard implements CanActivate {
 
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest<RequestWithAdmin>();
-    const authorization = request.headers.authorization;
+    const rawAuth = request.headers.authorization;
+    const authorization = Array.isArray(rawAuth) ? rawAuth[0] : rawAuth;
 
     if (!authorization) {
       throw new UnauthorizedException('Missing Authorization header');

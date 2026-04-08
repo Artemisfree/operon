@@ -207,3 +207,17 @@ export async function assignDelivery(
     },
   );
 }
+
+export type MetricsSnapshot = {
+  ordersTotal: number;
+  ordersDelivered: number;
+  deliveredPct: number;
+  conversationsTotal: number;
+  conversationsWithOperatorReply: number;
+  handoffPct: number;
+  reviewRequestsSent: number;
+};
+
+export async function getMetrics(token: string) {
+  return adminRequest<MetricsSnapshot>('/admin/metrics', token);
+}

@@ -53,7 +53,7 @@ export class OpenAiLlmService implements ChatLlmClient {
               `${AI_SYSTEM_PROMPT}\nСформируй итоговый ответ пользователю на основе результатов tool execution.`,
           },
           ...input.messages.map((message) => ({
-            role: message.role,
+            role: message.role as 'user' | 'assistant' | 'system',
             content: message.content,
           })),
           {
@@ -83,7 +83,7 @@ export class OpenAiLlmService implements ChatLlmClient {
           content: AI_SYSTEM_PROMPT,
         },
         ...input.messages.map((message) => ({
-          role: message.role,
+          role: message.role as 'user' | 'assistant' | 'system',
           content: message.content,
         })),
       ],
@@ -94,11 +94,21 @@ export class OpenAiLlmService implements ChatLlmClient {
     return {
       reply: message?.content ?? '',
       toolCalls:
-        message?.tool_calls?.map((toolCall) => ({
-          id: toolCall.id,
-          name: toolCall.function.name,
-          arguments: JSON.parse(toolCall.function.arguments),
-        })) ?? [],
+        message?.tool_calls?.map((toolCall) => {
+          if (!('function' in toolCall) || !toolCall.function) {
+            return {
+              id: toolCall.id,
+              name: '',
+              arguments: {},
+            };
+          }
+
+          return {
+            id: toolCall.id,
+            name: toolCall.function.name,
+            arguments: JSON.parse(toolCall.function.arguments),
+          };
+        }) ?? [],
       model: this.getModel(),
     };
   }

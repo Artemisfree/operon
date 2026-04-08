@@ -8,6 +8,7 @@ import { OrderStatus, Prisma } from '@prisma/client';
 
 import { serializeValue } from '../../common/serialization.js';
 import { PrismaService } from '../db/prisma.service.js';
+import { ReviewService } from '../review/review.service.js';
 import type {
   CreateOrderInput,
   UpdateOrderStatusInput,
@@ -25,7 +26,10 @@ const ALLOWED_STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
 
 @Injectable()
 export class OrdersService {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(ReviewService) private readonly reviewService: ReviewService,
+  ) {}
 
   async create(input: CreateOrderInput) {
     const productIds = [...new Set(input.items.map((item) => item.productId))];
@@ -60,6 +64,7 @@ export class OrdersService {
           customerPhone: input.customerPhone,
           deliveryAddress: input.deliveryAddress,
           comment: input.comment,
+          conversationId: input.conversationId,
           totalAmount: new Prisma.Decimal(totalAmount),
           items: {
             create: input.items.map((item) => {
@@ -160,6 +165,10 @@ export class OrdersService {
         include: this.orderInclude(),
       });
     });
+
+    if (input.status === OrderStatus.delivered) {
+      await this.reviewService.scheduleReviewForOrder(id);
+    }
 
     return serializeValue(updated);
   }

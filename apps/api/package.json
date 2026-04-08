@@ -10,9 +10,9 @@
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:seed": "tsx prisma/seed.ts",
     "start": "node dist/main.js",
-    "test": "node --test --import tsx test/delivery.schemas.unit.test.ts test/app.integration.test.ts test/delivery.integration.test.ts",
+    "test": "node --test --test-concurrency=1 --import tsx test/delivery.schemas.unit.test.ts test/app.integration.test.ts test/delivery.integration.test.ts test/review.integration.test.ts",
     "test:unit": "node --test --import tsx test/delivery.schemas.unit.test.ts",
-    "test:integration": "node --test --import tsx test/app.integration.test.ts test/delivery.integration.test.ts",
+    "test:integration": "node --test --test-concurrency=1 --import tsx test/app.integration.test.ts test/delivery.integration.test.ts test/review.integration.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
@@ -21,6 +21,7 @@
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.1.6",
     "@nestjs/platform-express": "^11.1.6",
+    "@nestjs/schedule": "^5.0.1",
     "bcryptjs": "^3.0.2",
     "jsonwebtoken": "^9.0.2",
     "openai": "^6.7.0",

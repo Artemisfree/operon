@@ -7,6 +7,7 @@ export const createOrderSchema = z.object({
   customerPhone: z.string().trim().min(6).max(32),
   deliveryAddress: z.string().trim().min(5).max(500),
   comment: z.string().trim().max(2000).optional(),
+  conversationId: z.string().uuid().optional(),
   items: z.array(
     z.object({
       productId: z.string().uuid(),
