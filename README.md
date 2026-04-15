@@ -6,6 +6,7 @@ Backend и Postgres в локальной разработке должны по
 
 - Docker
 - Docker Compose
+- Node.js 24+ и `corepack` для локального запуска frontend/test команд вне контейнера
 
 ## Quick Start
 
@@ -27,7 +28,12 @@ docker compose up --build -d
    - применяет миграции,
    - запускает backend в watch-режиме.
 
-4. Проверить, что backend отвечает:
+4. При старте compose также поднимаются frontend dev-сервисы:
+   - `website-widget` на `http://localhost:3001`
+   - `admin-web` на `http://localhost:3002`
+   - `courier-web` на `http://localhost:3003`
+
+5. Проверить, что backend отвечает:
 
 ```bash
 curl http://localhost:3000/api/health
@@ -43,13 +49,13 @@ curl http://localhost:3000/api/health
 }
 ```
 
-5. При необходимости загрузить demo data:
+6. При необходимости загрузить demo data:
 
 ```bash
 docker compose exec api pnpm --filter @operon/api prisma:seed
 ```
 
-6. Прогнать тесты API (нужен доступ к Postgres, тот же `DATABASE_URL`, что в контейнере `api`):
+7. Прогнать тесты API (нужен доступ к Postgres, тот же `DATABASE_URL`, что в контейнере `api`):
 
 ```bash
 docker compose exec -T api pnpm --filter @operon/api test
@@ -58,23 +64,23 @@ docker compose exec -T api pnpm --filter @operon/api test
 Локально без Docker (только быстрые unit-тесты схем Zod, без БД):
 
 ```bash
-pnpm --filter @operon/api test:unit
+corepack pnpm --filter @operon/api test:unit
 ```
 
 Полный набор integration-тестов вне Docker (нужен запущенный Postgres, например `DATABASE_URL` с `127.0.0.1:9432`):
 
 ```bash
-pnpm --filter @operon/api test:integration
+corepack pnpm --filter @operon/api test:integration
+```
 
 Integration-файлы запускаются **последовательно** (`--test-concurrency=1`), чтобы не гонять одну БД из нескольких процессов. Для Prisma/JWT в тестах см. дефолты в `apps/api/test/helpers.ts` или задайте `DATABASE_URL` / `JWT_SECRET` в окружении.
-```
 
 Тесты фронтендов (Vitest, без backend):
 
 ```bash
-pnpm --filter @operon/admin-web test
-pnpm --filter @operon/courier-web test
-pnpm --filter @operon/website-widget test
+corepack pnpm --filter @operon/admin-web test
+corepack pnpm --filter @operon/courier-web test
+corepack pnpm --filter @operon/website-widget test
 ```
 
 ## Local Dev
@@ -93,13 +99,10 @@ pnpm --filter @operon/website-widget test
 - [admin-web](apps/admin-web) — операторская панель (диалоги + заказы/доставка)
 - [courier-web](apps/courier-web) — курьерский web (токен, доставки, фото, «Доставлено»)
 
-Локальный запуск:
+Контейнерный запуск всех UI:
 
 ```bash
-docker compose up -d
-docker compose exec api pnpm --filter @operon/website-widget dev
-docker compose exec api pnpm --filter @operon/admin-web dev
-docker compose exec api pnpm --filter @operon/courier-web dev
+docker compose up --build -d
 ```
 
 Если нужен явный backend URL для Vite:
@@ -107,6 +110,20 @@ docker compose exec api pnpm --filter @operon/courier-web dev
 ```bash
 VITE_API_BASE_URL=http://localhost:3000/api
 ```
+
+Посмотреть логи конкретного UI:
+
+```bash
+docker compose logs -f website-widget
+docker compose logs -f admin-web
+docker compose logs -f courier-web
+```
+
+## MVP Runbook
+
+- Пошаговый smoke по основному сценарию: [MVP_SMOKE_CHECKLIST.md](/Users/artemnadtoceev/dev/operon/MVP_SMOKE_CHECKLIST.md)
+- Матрица критериев приёмки: [MVP_ACCEPTANCE_MATRIX.md](/Users/artemnadtoceev/dev/operon/MVP_ACCEPTANCE_MATRIX.md)
+- Финальный статус readiness: [MVP_STATUS.md](/Users/artemnadtoceev/dev/operon/MVP_STATUS.md)
 
 ## Environment
 
@@ -145,7 +162,16 @@ docker compose exec api pnpm --filter @operon/api prisma:generate
 
 - admin user: `admin@operon.local`
 - пароль: `admin12345`
-- 5 демо-товаров
+- courier token: `courier-dev-token`
+- второй demo courier: `courier-anna-token`
+- 6 демо-товаров
+- demo conversations и orders на разных стадиях:
+  - AI-чат без заказа
+  - handoff на операторе
+  - заказ в `preparing`
+  - заказ в `ready_for_dispatch`
+  - заказ в `on_the_way`
+  - заказ в `delivered` с отправленным review
 
 Файл сида: [seed.ts](/Users/artemnadtoceev/dev/operon/apps/api/prisma/seed.ts)
 
@@ -273,6 +299,10 @@ AI_PROVIDER=mock
 6. Перевести order в `confirmed` через `POST /api/orders/:id/status`.
 7. Проверить chat flow через `POST /api/chat/message`.
 8. Проверить handoff flow через admin conversation endpoints.
+9. Довести заказ до `ready_for_dispatch`, назначить курьера и закрыть delivery.
+10. Запустить review processing и проверить метрики.
+
+Полный сценарий MVP-смока с ожидаемыми результатами вынесен в [MVP_SMOKE_CHECKLIST.md](/Users/artemnadtoceev/dev/operon/MVP_SMOKE_CHECKLIST.md).
 
 Пример login:
 
@@ -320,6 +350,8 @@ Integration tests находятся в [app.integration.test.ts](/Users/artemna
 - двухшаговое подтверждение заказа в чате
 - polling-style получение истории сообщений
 - operator handoff: AI перестаёт отвечать, оператор может ответить вручную, затем чат возвращается AI
+- delivery flow: назначение курьера, proof photo, закрытие доставки
+- review flow: отложенный review request, idempotency и ручной прогон очереди
 - frontend utility tests:
   - `website-widget`: нормализация API base URL
   - `admin-web`: стабильный storage key для auth token
@@ -328,14 +360,18 @@ Integration tests находятся в [app.integration.test.ts](/Users/artemna
 
 - `website-widget` typecheck проходит
 - `admin-web` typecheck проходит
+- `courier-web` typecheck проходит
 - `website-widget` production build проходит
 - `admin-web` production build проходит
+- `courier-web` production build проходит
 
 Запуск внутри контейнера:
 
 ```bash
 docker compose exec api pnpm --filter @operon/api test
 ```
+
+Для полного MVP sign-off после запуска окружения используйте [MVP_SMOKE_CHECKLIST.md](/Users/artemnadtoceev/dev/operon/MVP_SMOKE_CHECKLIST.md) и обновляйте статусы в [MVP_ACCEPTANCE_MATRIX.md](/Users/artemnadtoceev/dev/operon/MVP_ACCEPTANCE_MATRIX.md).
 
 ## Docker Operations
 

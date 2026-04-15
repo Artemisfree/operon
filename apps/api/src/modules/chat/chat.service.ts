@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { MessageRole } from '@prisma/client';
 
 import { serializeValue } from '../../common/serialization.js';
 import { PrismaService } from '../db/prisma.service.js';
@@ -127,6 +128,11 @@ export class ChatService {
     const conversations = await this.prisma.conversation.findMany({
       include: {
         messages: {
+          where: {
+            role: {
+              not: MessageRole.tool,
+            },
+          },
           orderBy: { createdAt: 'desc' },
           take: 1,
         },
@@ -152,6 +158,11 @@ export class ChatService {
       where: { id: conversationId },
       include: {
         messages: {
+          where: {
+            role: {
+              not: MessageRole.tool,
+            },
+          },
           orderBy: { createdAt: 'asc' },
         },
       },

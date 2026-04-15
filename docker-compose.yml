@@ -42,9 +42,97 @@ services:
       - .:/workspace
       - api-node-modules:/workspace/node_modules
       - api-app-node-modules:/workspace/apps/api/node_modules
-    command: sh -c "corepack enable && pnpm install --no-frozen-lockfile && pnpm --filter @operon/api prisma:generate && pnpm --filter @operon/api prisma:migrate:deploy && pnpm --filter @operon/api dev"
+    command: >
+      sh -c "
+      corepack enable &&
+      pnpm install --no-frozen-lockfile &&
+      pnpm --filter @operon/api prisma:generate &&
+      until pnpm --filter @operon/api prisma:migrate:deploy; do
+        echo 'Waiting for postgres to accept Prisma connections...';
+        sleep 2;
+      done &&
+      pnpm --filter @operon/api dev
+      "
+
+  website-widget:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: operon-website-widget
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_started
+    environment:
+      VITE_API_BASE_URL: http://localhost:3000/api
+    ports:
+      - "3001:3001"
+    volumes:
+      - .:/workspace
+      - website-node-modules:/workspace/node_modules
+      - website-app-node-modules:/workspace/apps/website-widget/node_modules
+    command: >
+      sh -c "
+      corepack enable &&
+      pnpm install --no-frozen-lockfile &&
+      pnpm --filter @operon/website-widget dev --host 0.0.0.0 --port 3001
+      "
+
+  admin-web:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: operon-admin-web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_started
+    environment:
+      VITE_API_BASE_URL: http://localhost:3000/api
+    ports:
+      - "3002:3002"
+    volumes:
+      - .:/workspace
+      - admin-node-modules:/workspace/node_modules
+      - admin-app-node-modules:/workspace/apps/admin-web/node_modules
+    command: >
+      sh -c "
+      corepack enable &&
+      pnpm install --no-frozen-lockfile &&
+      pnpm --filter @operon/admin-web dev --host 0.0.0.0 --port 3002
+      "
+
+  courier-web:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: operon-courier-web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_started
+    environment:
+      VITE_API_BASE_URL: http://localhost:3000/api
+    ports:
+      - "3003:3003"
+    volumes:
+      - .:/workspace
+      - courier-node-modules:/workspace/node_modules
+      - courier-app-node-modules:/workspace/apps/courier-web/node_modules
+    command: >
+      sh -c "
+      corepack enable &&
+      pnpm install --no-frozen-lockfile &&
+      pnpm --filter @operon/courier-web dev --host 0.0.0.0 --port 3003
+      "
 
 volumes:
   postgres-data:
   api-node-modules:
   api-app-node-modules:
+  website-node-modules:
+  website-app-node-modules:
+  admin-node-modules:
+  admin-app-node-modules:
+  courier-node-modules:
+  courier-app-node-modules:

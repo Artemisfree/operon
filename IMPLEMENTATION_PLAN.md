@@ -242,6 +242,13 @@
 - **Review:** `REVIEW_DELAY_MINUTES` (по умолчанию 7); после `delivered` планируется сообщение в чат; админ: «Метрики», API `GET /api/admin/metrics`, ручной прогон очереди `POST /api/review/send`.
 - **Следующий шаг кода (по желанию):** e2e-smoke «чат → заказ → доставка → review»; WebSocket вместо polling; продуктовые хвосты из бэклога.
 
+### 7.2 MVP Readiness Artifacts (2026-04-15)
+- Добавлен пошаговый runbook: [MVP_SMOKE_CHECKLIST.md](/Users/artemnadtoceev/dev/operon/MVP_SMOKE_CHECKLIST.md)
+- Добавлена матрица критериев: [MVP_ACCEPTANCE_MATRIX.md](/Users/artemnadtoceev/dev/operon/MVP_ACCEPTANCE_MATRIX.md)
+- Зафиксирован финальный gate/status: [MVP_STATUS.md](/Users/artemnadtoceev/dev/operon/MVP_STATUS.md)
+- Текущий статус в документации: `MVP Ready with Known Limitations`
+- Ограничения для sign-off: нужен повторный прогон полного smoke в живом локальном окружении; из текущего sandbox не подтверждаются Docker/network-зависимые шаги
+
 ## Phase A — Foundation (Week 1)
 ### Задачи
 - A1. Поднять backend + БД + миграции.
