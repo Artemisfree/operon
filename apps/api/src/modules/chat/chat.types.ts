@@ -28,6 +28,7 @@ export type ChatLlmResponse = {
 export type ChatLlmRequest = {
   messages: ChatLlmMessage[];
   conversationId: string;
+  systemPrompt: string;
   customerMeta?: Record<string, unknown>;
   toolResults?: ChatToolResult[];
 };

@@ -6,6 +6,7 @@ import {
 import { Prisma } from '@prisma/client';
 
 import { serializeValue } from '../../common/serialization.js';
+import { ChatBehaviorService } from '../chat-behavior/chat-behavior.service.js';
 import { PrismaService } from '../db/prisma.service.js';
 import { LLM_CLIENT } from './chat.constants.js';
 import {
@@ -24,6 +25,8 @@ import type {
 export class ChatOrchestratorService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(ChatBehaviorService)
+    private readonly chatBehaviorService: ChatBehaviorService,
     @Inject(ChatToolService) private readonly chatToolService: ChatToolService,
     @Inject(LLM_CLIENT) private readonly llmClient: ChatLlmClient,
   ) {}
@@ -47,6 +50,16 @@ export class ChatOrchestratorService {
         role: this.mapRole(message.role),
         content: message.content,
       }));
+    const behaviorPrompt = await this.chatBehaviorService.resolveBehaviorPrompt(
+      conversation.behaviorVersionId,
+    );
+
+    if (!conversation.behaviorVersionId) {
+      await this.prisma.conversation.update({
+        where: { id: conversation.id },
+        data: { behaviorVersionId: behaviorPrompt.behaviorVersionId },
+      });
+    }
 
     try {
       const deterministicResponse = await this.tryCreateOrderFromConfirmation(
@@ -61,6 +74,7 @@ export class ChatOrchestratorService {
       const initialResponse = await this.llmClient.respond({
         messages,
         conversationId: conversation.id,
+        systemPrompt: behaviorPrompt.compiledPrompt,
         customerMeta: input.customerMeta,
       });
 
@@ -98,6 +112,7 @@ export class ChatOrchestratorService {
           await this.prisma.aiActionLog.create({
             data: {
               conversationId: conversation.id,
+              behaviorVersionId: behaviorPrompt.behaviorVersionId,
               actionType: 'tool_call',
               toolName: toolCall.name,
               status: 'succeeded',
@@ -137,6 +152,7 @@ export class ChatOrchestratorService {
           await this.prisma.aiActionLog.create({
             data: {
               conversationId: conversation.id,
+              behaviorVersionId: behaviorPrompt.behaviorVersionId,
               actionType: 'tool_call',
               toolName: toolCall.name,
               status: 'failed',
@@ -152,6 +168,7 @@ export class ChatOrchestratorService {
         ? await this.llmClient.respond({
             messages,
             conversationId: conversation.id,
+            systemPrompt: behaviorPrompt.compiledPrompt,
             customerMeta: input.customerMeta,
             toolResults,
           })
@@ -172,6 +189,7 @@ export class ChatOrchestratorService {
       await this.prisma.aiActionLog.create({
         data: {
           conversationId: conversation.id,
+          behaviorVersionId: behaviorPrompt.behaviorVersionId,
           actionType: 'orchestrator_failure',
           status: 'failed',
           model: this.llmClient.getModel(),

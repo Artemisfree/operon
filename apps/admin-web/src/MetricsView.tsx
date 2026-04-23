@@ -6,10 +6,17 @@ type Props = {
   token: string;
   onOpenChats: () => void;
   onOpenOrders: () => void;
+  onOpenBehavior?: () => void;
   onLogout: () => void;
 };
 
-export function MetricsView({ token, onOpenChats, onOpenOrders, onLogout }: Props) {
+export function MetricsView({
+  token,
+  onOpenChats,
+  onOpenOrders,
+  onOpenBehavior,
+  onLogout,
+}: Props) {
   const [data, setData] = useState<MetricsSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,6 +54,11 @@ export function MetricsView({ token, onOpenChats, onOpenOrders, onLogout }: Prop
             <button type="button" onClick={onOpenOrders}>
               Заказы
             </button>
+            {onOpenBehavior ? (
+              <button type="button" onClick={onOpenBehavior}>
+                Поведение AI
+              </button>
+            ) : null}
             <button type="button" onClick={onLogout}>
               Выйти
             </button>

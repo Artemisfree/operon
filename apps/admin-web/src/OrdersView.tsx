@@ -14,10 +14,17 @@ type Props = {
   token: string;
   onOpenChats: () => void;
   onOpenMetrics?: () => void;
+  onOpenBehavior?: () => void;
   onLogout: () => void;
 };
 
-export function OrdersView({ token, onOpenChats, onOpenMetrics, onLogout }: Props) {
+export function OrdersView({
+  token,
+  onOpenChats,
+  onOpenMetrics,
+  onOpenBehavior,
+  onLogout,
+}: Props) {
   const [orders, setOrders] = useState<OrderRecord[]>([]);
   const [couriers, setCouriers] = useState<CourierRecord[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -70,6 +77,11 @@ export function OrdersView({ token, onOpenChats, onOpenMetrics, onLogout }: Prop
             {onOpenMetrics ? (
               <button type="button" onClick={onOpenMetrics}>
                 Метрики
+              </button>
+            ) : null}
+            {onOpenBehavior ? (
+              <button type="button" onClick={onOpenBehavior}>
+                Поведение AI
               </button>
             ) : null}
             <button type="button" onClick={onLogout}>

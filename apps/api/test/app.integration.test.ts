@@ -220,6 +220,181 @@ describe('API integration', () => {
     assert.equal(listResponse.body[0].name, 'Круассан');
   });
 
+  it('manages AI behavior drafts, preview, publish, and conversation binding', async () => {
+    const passwordHash = await hash('admin12345', 10);
+    await prisma.adminUser.create({
+      data: {
+        email: 'behavior-admin@test.local',
+        passwordHash,
+      },
+    });
+
+    const loginResponse = await request(app.getHttpServer())
+      .post('/api/admin/auth/login')
+      .send({
+        email: 'behavior-admin@test.local',
+        password: 'admin12345',
+      })
+      .expect(201);
+
+    const token = loginResponse.body.accessToken as string;
+
+    const listResponse = await request(app.getHttpServer())
+      .get('/api/admin/ai-behaviors')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    assert.equal(listResponse.body.length, 1);
+    const defaultProfileId = listResponse.body[0].id as string;
+
+    const profileResponse = await request(app.getHttpServer())
+      .get(`/api/admin/ai-behaviors/${defaultProfileId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    const nextDefinition = structuredClone(profileResponse.body.draft.definition) as {
+      profileMeta: { name: string };
+      stages: Array<{
+        stageId: string;
+        blocks: Array<{
+          type: string;
+          config: Record<string, unknown>;
+        }>;
+      }>;
+    };
+
+    nextDefinition.profileMeta.name = 'Основной обновлённый';
+    const greetingStage = nextDefinition.stages.find(
+      (stage) => stage.stageId === 'greeting',
+    );
+    const greetingBlock = greetingStage?.blocks.find(
+      (block) => block.type === 'GreetingBlock',
+    );
+    const fallbackStage = nextDefinition.stages.find(
+      (stage) => stage.stageId === 'fallback',
+    );
+    const fallbackBlock = fallbackStage?.blocks.find(
+      (block) => block.type === 'FallbackBlock',
+    );
+    const handoffStage = nextDefinition.stages.find(
+      (stage) => stage.stageId === 'handoff',
+    );
+    const handoffBlock = handoffStage?.blocks.find(
+      (block) => block.type === 'HandoffBlock',
+    );
+    const createOrderStage = nextDefinition.stages.find(
+      (stage) => stage.stageId === 'create-order',
+    );
+    const createOrderBlock = createOrderStage?.blocks.find(
+      (block) => block.type === 'CreateOrderBlock',
+    );
+    if (!greetingBlock) {
+      throw new Error('GreetingBlock missing in default definition');
+    }
+    if (!fallbackBlock || !handoffBlock || !createOrderBlock) {
+      throw new Error('Expected behavior blocks missing in default definition');
+    }
+    greetingBlock.config.greetingText =
+      'Поздоровайся и скажи, что работаешь по обновлённому профилю.';
+    fallbackBlock.config.fallbackText =
+      'ТЕСТОВЫЙ_FALLBACK: задай только один следующий параметр заказа.';
+    handoffBlock.config.handoffMessage = 'ТЕСТОВЫЙ_HANDOFF: подключаю оператора.';
+    createOrderBlock.config.successTemplate = 'ТЕСТОВЫЙ_УСПЕХ {orderId}';
+
+    const previewResponse = await request(app.getHttpServer())
+      .post(`/api/admin/ai-behaviors/${defaultProfileId}/preview`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        definition: nextDefinition,
+      })
+      .expect(201);
+
+    assert.equal(previewResponse.body.errors.length, 0);
+    assert.match(previewResponse.body.compiledPrompt, /обновлённому профилю/i);
+
+    const saveDraftResponse = await request(app.getHttpServer())
+      .post(`/api/admin/ai-behaviors/${defaultProfileId}/draft`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        name: 'Основной обновлённый',
+        description: 'Тестовый draft',
+        definition: nextDefinition,
+      })
+      .expect(201);
+
+    assert.equal(saveDraftResponse.body.name, 'Основной обновлённый');
+    assert.equal(saveDraftResponse.body.preview.errors.length, 0);
+
+    const publishedBefore = await prisma.agentBehaviorVersion.findFirstOrThrow({
+      where: {
+        profileId: defaultProfileId,
+        status: 'published',
+      },
+    });
+
+    const publishResponse = await request(app.getHttpServer())
+      .post(`/api/admin/ai-behaviors/${defaultProfileId}/publish`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(201);
+
+    assert.equal(publishResponse.body.published.version, 2);
+    assert.equal(publishResponse.body.draft.version, 3);
+    assert.match(publishResponse.body.published.compiledPrompt, /обновлённому профилю/i);
+
+    const publishedAfter = await prisma.agentBehaviorVersion.findFirstOrThrow({
+      where: {
+        profileId: defaultProfileId,
+        status: 'published',
+      },
+    });
+
+    assert.notEqual(publishedBefore.id, publishedAfter.id);
+
+    await prisma.product.create({
+      data: {
+        name: 'Американо',
+        description: 'Кофе',
+        price: 190,
+        currency: 'RUB',
+      },
+    });
+
+    const fallbackChatResponse = await request(app.getHttpServer())
+      .post('/api/chat/message')
+      .send({
+        text: 'Привет',
+      })
+      .expect(201);
+
+    assert.match(fallbackChatResponse.body.reply, /обновлённому профилю/i);
+    assert.match(fallbackChatResponse.body.reply, /ТЕСТОВЫЙ_FALLBACK/i);
+
+    const handoffChatResponse = await request(app.getHttpServer())
+      .post('/api/chat/message')
+      .send({
+        text: 'Позовите оператора, пожалуйста',
+      })
+      .expect(201);
+
+    assert.equal(handoffChatResponse.body.handoff_state, 'operator');
+    assert.match(handoffChatResponse.body.reply, /ТЕСТОВЫЙ_HANDOFF/i);
+
+    const chatResponse = await request(app.getHttpServer())
+      .post('/api/chat/message')
+      .send({
+        text: 'Хочу заказать 1 Американо. Телефон: +79990001122. Адрес: Москва, Садовая 7. Подтверждаю заказ.',
+      })
+      .expect(201);
+
+    assert.match(chatResponse.body.reply, /ТЕСТОВЫЙ_УСПЕХ/i);
+
+    const conversation = await prisma.conversation.findUniqueOrThrow({
+      where: { id: chatResponse.body.conversation_id as string },
+    });
+
+    assert.equal(conversation.behaviorVersionId, publishedAfter.id);
+  });
+
   it('creates an order through chat tool-calling', async () => {
     await prisma.product.create({
       data: {

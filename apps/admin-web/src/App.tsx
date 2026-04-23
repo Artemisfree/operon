@@ -13,9 +13,12 @@ import {
 import { clearToken, loadToken, storeToken } from './auth';
 import { MetricsView } from './MetricsView';
 import { OrdersView } from './OrdersView';
+import { BehaviorView } from './BehaviorView';
 
 export function App() {
-  const [view, setView] = useState<'chats' | 'orders' | 'metrics'>('chats');
+  const [view, setView] = useState<'chats' | 'orders' | 'metrics' | 'behavior'>(
+    'chats',
+  );
   const [token, setToken] = useState<string | null>(() => loadToken());
   const [email, setEmail] = useState('admin@operon.local');
   const [password, setPassword] = useState('admin12345');
@@ -165,6 +168,7 @@ export function App() {
           token={token}
           onOpenChats={() => setView('chats')}
           onOpenMetrics={() => setView('metrics')}
+          onOpenBehavior={() => setView('behavior')}
           onLogout={handleLogout}
         />
       </main>
@@ -177,8 +181,23 @@ export function App() {
         token={token}
         onOpenChats={() => setView('chats')}
         onOpenOrders={() => setView('orders')}
+        onOpenBehavior={() => setView('behavior')}
         onLogout={handleLogout}
       />
+    );
+  }
+
+  if (view === 'behavior') {
+    return (
+      <main className="admin-shell admin-shell-behavior">
+        <BehaviorView
+          token={token}
+          onOpenChats={() => setView('chats')}
+          onOpenOrders={() => setView('orders')}
+          onOpenMetrics={() => setView('metrics')}
+          onLogout={handleLogout}
+        />
+      </main>
     );
   }
 
@@ -196,6 +215,9 @@ export function App() {
             </button>
             <button type="button" onClick={() => setView('metrics')}>
               Метрики
+            </button>
+            <button type="button" onClick={() => setView('behavior')}>
+              Поведение AI
             </button>
             <button type="button" onClick={handleLogout}>
               Выйти

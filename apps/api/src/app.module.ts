@@ -4,6 +4,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 
 import { appConfig } from './common/config/app.config.js';
 import { AuthModule } from './modules/auth/auth.module.js';
+import { ChatBehaviorModule } from './modules/chat-behavior/chat-behavior.module.js';
 import { ChatModule } from './modules/chat/chat.module.js';
 import { DatabaseModule } from './modules/db/database.module.js';
 import { HealthModule } from './modules/health/health.module.js';
@@ -22,6 +23,7 @@ import { ReviewModule } from './modules/review/review.module.js';
     DatabaseModule,
     HealthModule,
     AuthModule,
+    ChatBehaviorModule,
     ProductsModule,
     OrdersModule,
     ChatModule,

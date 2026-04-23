@@ -2,10 +2,7 @@ import { Inject, Injectable, ServiceUnavailableException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
 
-import {
-  AI_SYSTEM_PROMPT,
-  CHAT_TOOL_DEFINITIONS,
-} from '../chat.constants.js';
+import { CHAT_TOOL_DEFINITIONS } from '../chat.constants.js';
 import type {
   ChatLlmClient,
   ChatLlmRequest,
@@ -50,7 +47,7 @@ export class OpenAiLlmService implements ChatLlmClient {
           {
             role: 'system',
             content:
-              `${AI_SYSTEM_PROMPT}\nСформируй итоговый ответ пользователю на основе результатов tool execution.`,
+              `${input.systemPrompt}\nСформируй итоговый ответ пользователю на основе результатов tool execution.`,
           },
           ...input.messages.map((message) => ({
             role: message.role as 'user' | 'assistant' | 'system',
@@ -80,7 +77,7 @@ export class OpenAiLlmService implements ChatLlmClient {
       messages: [
         {
           role: 'system',
-          content: AI_SYSTEM_PROMPT,
+          content: input.systemPrompt,
         },
         ...input.messages.map((message) => ({
           role: message.role as 'user' | 'assistant' | 'system',

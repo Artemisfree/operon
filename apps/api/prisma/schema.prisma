@@ -53,6 +53,14 @@ enum ReviewRequestStatus {
   @@map("review_request_status")
 }
 
+enum AgentBehaviorVersionStatus {
+  draft
+  published
+  archived
+
+  @@map("agent_behavior_version_status")
+}
+
 model AdminUser {
   id           String   @id @default(uuid()) @db.Uuid
   email        String   @unique
@@ -65,17 +73,20 @@ model AdminUser {
 }
 
 model Conversation {
-  id           String        @id @default(uuid()) @db.Uuid
-  customerName String?       @map("customer_name")
-  customerPhone String?      @map("customer_phone")
-  handoffState HandoffState  @default(ai) @map("handoff_state")
-  createdAt    DateTime      @default(now()) @map("created_at")
-  updatedAt    DateTime      @updatedAt @map("updated_at")
-  messages     Message[]
-  aiActionLogs AiActionLog[]
-  orders       Order[]
-  reviewRequests ReviewRequest[]
+  id                String                @id @default(uuid()) @db.Uuid
+  customerName      String?               @map("customer_name")
+  customerPhone     String?               @map("customer_phone")
+  handoffState      HandoffState          @default(ai) @map("handoff_state")
+  behaviorVersionId String?               @map("behavior_version_id") @db.Uuid
+  createdAt         DateTime              @default(now()) @map("created_at")
+  updatedAt         DateTime              @updatedAt @map("updated_at")
+  messages          Message[]
+  aiActionLogs      AiActionLog[]
+  orders            Order[]
+  reviewRequests    ReviewRequest[]
+  behaviorVersion   AgentBehaviorVersion? @relation(fields: [behaviorVersionId], references: [id], onDelete: SetNull)
 
+  @@index([behaviorVersionId])
   @@map("conversations")
 }
 
@@ -95,6 +106,7 @@ model Message {
 model AiActionLog {
   id             String         @id @default(uuid()) @db.Uuid
   conversationId String         @db.Uuid @map("conversation_id")
+  behaviorVersionId String?     @db.Uuid @map("behavior_version_id")
   actionType     String         @map("action_type")
   toolName       String?        @map("tool_name")
   status         AiActionStatus @default(succeeded)
@@ -104,9 +116,44 @@ model AiActionLog {
   error          String?
   createdAt      DateTime       @default(now()) @map("created_at")
   conversation   Conversation   @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  behaviorVersion AgentBehaviorVersion? @relation(fields: [behaviorVersionId], references: [id], onDelete: SetNull)
 
   @@index([conversationId, createdAt])
+  @@index([behaviorVersionId, createdAt])
   @@map("ai_action_logs")
+}
+
+model AgentBehaviorProfile {
+  id          String                 @id @default(uuid()) @db.Uuid
+  name        String
+  code        String                 @unique
+  description String?
+  isDefault   Boolean                @default(false) @map("is_default")
+  createdAt   DateTime               @default(now()) @map("created_at")
+  updatedAt   DateTime               @updatedAt @map("updated_at")
+  versions    AgentBehaviorVersion[]
+
+  @@map("agent_behavior_profiles")
+}
+
+model AgentBehaviorVersion {
+  id             String                      @id @default(uuid()) @db.Uuid
+  profileId      String                      @map("profile_id") @db.Uuid
+  version        Int
+  status         AgentBehaviorVersionStatus  @default(draft)
+  definition     Json
+  compiledPrompt String                      @map("compiled_prompt")
+  createdBy      String?                     @map("created_by")
+  publishedAt    DateTime?                   @map("published_at")
+  createdAt      DateTime                    @default(now()) @map("created_at")
+  updatedAt      DateTime                    @updatedAt @map("updated_at")
+  profile        AgentBehaviorProfile        @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  conversations  Conversation[]
+  aiActionLogs   AiActionLog[]
+
+  @@unique([profileId, version])
+  @@index([profileId, status])
+  @@map("agent_behavior_versions")
 }
 
 model Product {

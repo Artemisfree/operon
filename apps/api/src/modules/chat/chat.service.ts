@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { MessageRole } from '@prisma/client';
 
 import { serializeValue } from '../../common/serialization.js';
+import { ChatBehaviorService } from '../chat-behavior/chat-behavior.service.js';
 import { PrismaService } from '../db/prisma.service.js';
 import type {
   ChatMessageInput,
@@ -15,6 +16,8 @@ import { ChatToolService } from './chat.tool-service.js';
 export class ChatService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(ChatBehaviorService)
+    private readonly chatBehaviorService: ChatBehaviorService,
     @Inject(ChatOrchestratorService)
     private readonly orchestrator: ChatOrchestratorService,
     @Inject(ChatToolService) private readonly chatToolService: ChatToolService,
@@ -37,6 +40,8 @@ export class ChatService {
           data: {
             customerName: input.customer_meta?.name,
             customerPhone: input.customer_meta?.phone,
+            behaviorVersionId:
+              await this.chatBehaviorService.getDefaultPublishedBehaviorVersionId(),
           },
         });
 

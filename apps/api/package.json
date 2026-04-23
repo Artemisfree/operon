@@ -10,8 +10,8 @@
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:seed": "tsx prisma/seed.ts",
     "start": "node dist/main.js",
-    "test": "node --test --test-concurrency=1 --import tsx test/delivery.schemas.unit.test.ts test/app.integration.test.ts test/delivery.integration.test.ts test/review.integration.test.ts",
-    "test:unit": "node --test --import tsx test/delivery.schemas.unit.test.ts",
+    "test": "node --test --test-concurrency=1 --import tsx test/delivery.schemas.unit.test.ts test/chat-behavior.unit.test.ts test/mock-llm.unit.test.ts test/app.integration.test.ts test/delivery.integration.test.ts test/review.integration.test.ts",
+    "test:unit": "node --test --import tsx test/delivery.schemas.unit.test.ts test/chat-behavior.unit.test.ts test/mock-llm.unit.test.ts",
     "test:integration": "node --test --test-concurrency=1 --import tsx test/app.integration.test.ts test/delivery.integration.test.ts test/review.integration.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

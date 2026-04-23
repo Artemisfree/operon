@@ -35,6 +35,8 @@ export async function resetDatabase() {
   await prisma.message.deleteMany();
   await prisma.reviewRequest.deleteMany();
   await prisma.conversation.deleteMany();
+  await prisma.agentBehaviorVersion.deleteMany();
+  await prisma.agentBehaviorProfile.deleteMany();
   await prisma.orderStatusHistory.deleteMany();
   await prisma.orderItem.deleteMany();
   await prisma.order.deleteMany();

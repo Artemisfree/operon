@@ -12,6 +12,13 @@ import type {
   ChatToolCall,
 } from '../chat.types.js';
 
+type MockPromptBehavior = {
+  greeting: string | null;
+  fallback: string | null;
+  handoffMessage: string | null;
+  orderSuccess: string | null;
+};
+
 @Injectable()
 export class MockLlmService implements ChatLlmClient {
   getModel() {
@@ -19,13 +26,18 @@ export class MockLlmService implements ChatLlmClient {
   }
 
   async respond(input: ChatLlmRequest): Promise<ChatLlmResponse> {
+    const promptBehavior = this.parsePromptBehavior(input.systemPrompt);
+
     if (input.toolResults?.length) {
-      return this.respondWithToolResults(input);
+      return this.respondWithToolResults(input, promptBehavior);
     }
 
     const lastUserMessage =
       [...input.messages].reverse().find((message) => message.role === 'user')
         ?.content ?? '';
+    const shouldIncludeGreeting = !input.messages.some(
+      (message) => message.role === 'assistant',
+    );
 
     const lowerText = lastUserMessage.toLowerCase();
 
@@ -52,7 +64,11 @@ export class MockLlmService implements ChatLlmClient {
 
     if (!orderData.productQuery) {
       return {
-        reply: 'Уточните, пожалуйста, какой товар вы хотите заказать.',
+        reply: this.composeReply(
+          shouldIncludeGreeting,
+          promptBehavior,
+          promptBehavior.fallback ?? 'Уточните, пожалуйста, какой товар вы хотите заказать.',
+        ),
         toolCalls: [],
         model: this.getModel(),
       };
@@ -78,7 +94,12 @@ export class MockLlmService implements ChatLlmClient {
 
     if (missingFields.length > 0) {
       return {
-        reply: `Для оформления заказа мне нужны: ${missingFields.join(', ')}.`,
+        reply: this.composeReply(
+          shouldIncludeGreeting,
+          promptBehavior,
+          promptBehavior.fallback ??
+            `Для оформления заказа мне нужны: ${missingFields.join(', ')}.`,
+        ),
         toolCalls: [
           {
             name: 'find_product',
@@ -122,12 +143,16 @@ export class MockLlmService implements ChatLlmClient {
     };
   }
 
-  private respondWithToolResults(input: ChatLlmRequest): ChatLlmResponse {
+  private respondWithToolResults(
+    input: ChatLlmRequest,
+    promptBehavior: MockPromptBehavior,
+  ): ChatLlmResponse {
     const failedResult = input.toolResults?.find((result) => !result.success);
 
     if (failedResult) {
       return {
         reply:
+          promptBehavior.fallback ??
           'Не удалось выполнить действие автоматически. Уточните данные заказа или попробуйте ещё раз.',
         toolCalls: [],
         model: this.getModel(),
@@ -140,7 +165,9 @@ export class MockLlmService implements ChatLlmClient {
 
     if (handoffResult) {
       return {
-        reply: 'Передаю диалог оператору. Он подключится вручную.',
+        reply:
+          promptBehavior.handoffMessage ??
+          'Передаю диалог оператору. Он подключится вручную.',
         toolCalls: [],
         model: this.getModel(),
       };
@@ -152,9 +179,11 @@ export class MockLlmService implements ChatLlmClient {
 
     if (orderResult) {
       const orderId = (orderResult.result as { id?: string } | undefined)?.id;
+      const successTemplate =
+        promptBehavior.orderSuccess ?? 'Заказ оформлен, номер {orderId}.';
 
       return {
-        reply: `Заказ оформлен${orderId ? `, номер ${orderId}` : ''}.`,
+        reply: this.formatOrderSuccessReply(successTemplate, orderId),
         toolCalls: [],
         model: this.getModel(),
       };
@@ -200,7 +229,9 @@ export class MockLlmService implements ChatLlmClient {
 
     if (missingFields.length > 0) {
       return {
-        reply: `Для оформления заказа мне нужны: ${missingFields.join(', ')}.`,
+        reply:
+          promptBehavior.fallback ??
+          `Для оформления заказа мне нужны: ${missingFields.join(', ')}.`,
         toolCalls: [],
         model: this.getModel(),
       };
@@ -211,6 +242,80 @@ export class MockLlmService implements ChatLlmClient {
       toolCalls: [],
       model: this.getModel(),
     };
+  }
+
+  private parsePromptBehavior(systemPrompt: string): MockPromptBehavior {
+    const lines = systemPrompt
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    const greetingLineIndex = lines.findIndex((line) => line === 'Приветствие');
+    const greeting =
+      greetingLineIndex >= 0
+        ? lines[greetingLineIndex + 1]
+            ?.replace(/\s+Сразу предложи помочь с оформлением заказа\.$/, '')
+            .trim() ?? null
+        : null;
+
+    const fallbackLine = lines.find((line) =>
+      line.startsWith('Если данных недостаточно, используй fallback: ') ||
+      line.startsWith('Если данных не хватает, используй fallback: '),
+    );
+    const handoffLine = lines.find((line) => line.includes('Перед handoff сообщай: '));
+    const successLine = lines.find((line) =>
+      line.startsWith('Вызывай create_order только после сбора обязательных данных.'),
+    );
+
+    return {
+      greeting,
+      fallback:
+        fallbackLine
+          ?.replace('Если данных недостаточно, используй fallback: ', '')
+          .replace('Если данных не хватает, используй fallback: ', '')
+          .replace(/\. Задавай один короткий вопрос за раз\.$/, '')
+          .replace(/\. Можешь задавать развёрнутые уточнения\.$/, '')
+          .trim() ?? null,
+      handoffMessage:
+        handoffLine
+          ?.split('Перед handoff сообщай: ')[1]
+          ?.replace(/\.$/, '')
+          .trim() ?? null,
+      orderSuccess:
+        successLine
+          ?.split('После успешного создания заказа: ')[1]
+          ?.replace(/\. В ответе кратко повторяй состав заказа\.$/, '')
+          .replace(/\.$/, '')
+          .trim() ?? null,
+    };
+  }
+
+  private composeReply(
+    shouldIncludeGreeting: boolean,
+    promptBehavior: MockPromptBehavior,
+    fallbackText: string,
+  ) {
+    if (shouldIncludeGreeting && promptBehavior.greeting) {
+      return `${promptBehavior.greeting} ${fallbackText}`.trim();
+    }
+
+    return fallbackText;
+  }
+
+  private formatOrderSuccessReply(template: string, orderId?: string) {
+    const withOrderId = template
+      .replace('{orderId}', orderId ?? '')
+      .replace('{order_id}', orderId ?? '');
+
+    if (withOrderId !== template) {
+      return withOrderId.trim();
+    }
+
+    if (orderId) {
+      return `${template.replace(/\.$/, '')}: ${orderId}.`;
+    }
+
+    return template;
   }
 
   private extractOrderData(

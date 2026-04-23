@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
+import { ChatBehaviorModule } from '../chat-behavior/chat-behavior.module.js';
 import { OrdersModule } from '../orders/orders.module.js';
 import { ProductsModule } from '../products/products.module.js';
 import { AuthModule } from '../auth/auth.module.js';
@@ -14,7 +15,7 @@ import { MockLlmService } from './llm/mock-llm.service.js';
 import { OpenAiLlmService } from './llm/openai-llm.service.js';
 
 @Module({
-  imports: [AuthModule, ProductsModule, OrdersModule],
+  imports: [AuthModule, ProductsModule, OrdersModule, ChatBehaviorModule],
   controllers: [ChatController, ChatAdminController],
   providers: [
     ChatService,
