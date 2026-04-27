@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   addBlockToStage,
@@ -22,6 +22,8 @@ import {
   publishBehaviorProfile,
   saveBehaviorDraft,
 } from './behaviorApi';
+import { AdminNav } from './AdminNav';
+import { LogoutButton } from './LogoutButton';
 import type {
   BehaviorBlockDefinition,
   BehaviorDefinition,
@@ -35,6 +37,7 @@ import { BEHAVIOR_STAGE_ORDER } from './behaviorTypes';
 
 type Props = {
   token: string;
+  activeView?: 'behavior';
   onOpenChats: () => void;
   onOpenOrders: () => void;
   onOpenMetrics: () => void;
@@ -56,6 +59,26 @@ const SUMMARY_FIELD_OPTIONS = [
   { value: 'comment', label: 'Комментарий' },
 ] as const;
 
+const TEMPLATE_OPTIONS = [
+  {
+    value: 'default',
+    label: 'Базовый заказ',
+    description: 'Полный сценарий заказа с уточнениями',
+  },
+  {
+    value: 'concise',
+    label: 'Короткие ответы',
+    description: 'Сжатые реплики без лишних деталей',
+  },
+  {
+    value: 'handoff-first',
+    label: 'С быстрым handoff',
+    description: 'Ранний перевод к оператору при сомнениях',
+  },
+] as const;
+
+type TemplateId = (typeof TEMPLATE_OPTIONS)[number]['value'];
+
 function formatDate(value: string | null) {
   if (!value) {
     return '—';
@@ -68,8 +91,21 @@ function cloneDefinition(definition: BehaviorDefinition) {
   return JSON.parse(JSON.stringify(definition)) as BehaviorDefinition;
 }
 
+function getCollectFieldLabel(value: unknown) {
+  return FIELD_OPTIONS.find((option) => option.value === value)?.label ?? 'данные клиента';
+}
+
+function getBlockDisplayLabel(block: BehaviorBlockDefinition) {
+  if (block.type === 'CollectFieldBlock') {
+    return `Собирает: ${getCollectFieldLabel(block.config.field)}`;
+  }
+
+  return BLOCK_LABELS[block.type];
+}
+
 export function BehaviorView({
   token,
+  activeView = 'behavior',
   onOpenChats,
   onOpenOrders,
   onOpenMetrics,
@@ -89,19 +125,23 @@ export function BehaviorView({
   const [versions, setVersions] = useState<BehaviorVersionRecord[]>([]);
   const [showVersions, setShowVersions] = useState(false);
   const [newProfileName, setNewProfileName] = useState('');
-  const [newProfileTemplate, setNewProfileTemplate] = useState<
-    'default' | 'concise' | 'handoff-first'
-  >('default');
+  const [newProfileTemplate, setNewProfileTemplate] = useState<TemplateId>('default');
+  const [templateMenuOpen, setTemplateMenuOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [creating, setCreating] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const templateMenuRef = useRef<HTMLDivElement | null>(null);
 
   const selectedBlockInfo = useMemo(
     () => (draft ? findBlock(draft, selectedBlockId) : null),
     [draft, selectedBlockId],
   );
+
+  const selectedTemplate = TEMPLATE_OPTIONS.find(
+    (option) => option.value === newProfileTemplate,
+  ) ?? TEMPLATE_OPTIONS[0];
 
   const reloadProfiles = async () => {
     const items = await listBehaviorProfiles(token);
@@ -188,6 +228,32 @@ export function BehaviorView({
 
     return () => window.clearTimeout(timeoutId);
   }, [draft, selectedId, token]);
+
+  useEffect(() => {
+    if (!templateMenuOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!templateMenuRef.current?.contains(event.target as Node)) {
+        setTemplateMenuOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setTemplateMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [templateMenuOpen]);
 
   const ensureDraft = () => {
     if (!draft) {
@@ -326,21 +392,15 @@ export function BehaviorView({
               Профили и шаблоны
             </p>
           </div>
-          <div className="admin-header-actions">
-            <button type="button" onClick={onOpenChats}>
-              Диалоги
-            </button>
-            <button type="button" onClick={onOpenOrders}>
-              Заказы
-            </button>
-            <button type="button" onClick={onOpenMetrics}>
-              Метрики
-            </button>
-            <button type="button" onClick={onLogout}>
-              Выйти
-            </button>
-          </div>
+          <LogoutButton onLogout={onLogout} />
         </header>
+        <AdminNav
+          active={activeView}
+          onOpenChats={onOpenChats}
+          onOpenOrders={onOpenOrders}
+          onOpenMetrics={onOpenMetrics}
+          onOpenBehavior={() => undefined}
+        />
 
         <div className="admin-behavior-sidebar-content">
           <div className="admin-behavior-create">
@@ -360,18 +420,49 @@ export function BehaviorView({
             </label>
             <label>
               <span>Шаблон</span>
-              <select
-                value={newProfileTemplate}
-                onChange={(event) =>
-                  setNewProfileTemplate(
-                    event.target.value as 'default' | 'concise' | 'handoff-first',
-                  )
-                }
-              >
-                <option value="default">Базовый заказ</option>
-                <option value="concise">Короткие ответы</option>
-                <option value="handoff-first">С быстрым handoff</option>
-              </select>
+              <div className="admin-template-select" ref={templateMenuRef}>
+                <button
+                  type="button"
+                  className="admin-template-select-trigger"
+                  aria-haspopup="listbox"
+                  aria-expanded={templateMenuOpen}
+                  onClick={() => setTemplateMenuOpen((current) => !current)}
+                >
+                  <span>
+                    <strong>{selectedTemplate.label}</strong>
+                    <small>{selectedTemplate.description}</small>
+                  </span>
+                  <span className="admin-template-select-chevron" aria-hidden="true">
+                    ▾
+                  </span>
+                </button>
+                {templateMenuOpen ? (
+                  <div className="admin-template-select-menu" role="listbox">
+                    {TEMPLATE_OPTIONS.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        role="option"
+                        aria-selected={option.value === newProfileTemplate}
+                        className={
+                          option.value === newProfileTemplate
+                            ? 'admin-template-select-option admin-template-select-option-active'
+                            : 'admin-template-select-option'
+                        }
+                        onClick={() => {
+                          setNewProfileTemplate(option.value);
+                          setTemplateMenuOpen(false);
+                        }}
+                      >
+                        <span>
+                          <strong>{option.label}</strong>
+                          <small>{option.description}</small>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
             </label>
             <button
               type="button"
@@ -393,21 +484,19 @@ export function BehaviorView({
                 <button
                   key={profile.id}
                   type="button"
-                  className={`admin-conversation-item admin-behavior-profile-item ${
-                    profile.id === selectedId ? 'admin-conversation-item-active' : ''
+                  className={`admin-behavior-profile-item ${
+                    profile.id === selectedId ? 'admin-behavior-profile-item-active' : ''
                   }`}
                   onClick={() => setSelectedId(profile.id)}
                 >
-                  <div className="admin-conversation-topline">
-                    <strong>{profile.name}</strong>
-                    {profile.isDefault ? (
-                      <span className="admin-order-status-pill">default</span>
-                    ) : null}
+                  <div className="admin-behavior-profile-title">
+                    <span>{profile.name}</span>
+                    {profile.isDefault ? <strong>default</strong> : null}
                   </div>
-                  <p className="admin-order-meta">
-                    draft v{profile.draftVersion?.version ?? '—'} · published v
-                    {profile.publishedVersion?.version ?? '—'}
-                  </p>
+                  <div className="admin-behavior-profile-versions">
+                    <span>draft v{profile.draftVersion?.version ?? '—'}</span>
+                    <span>published v{profile.publishedVersion?.version ?? '—'}</span>
+                  </div>
                 </button>
               ))}
             </div>
@@ -527,7 +616,7 @@ export function BehaviorView({
                             }}
                           >
                             <div className="admin-conversation-topline">
-                              <strong>{BLOCK_LABELS[block.type]}</strong>
+                              <strong>{getBlockDisplayLabel(block)}</strong>
                               <span className="admin-order-status-pill">
                                 {block.enabled ? 'on' : 'off'}
                               </span>
@@ -609,8 +698,18 @@ export function BehaviorView({
               </div>
 
               <div className="admin-behavior-side">
-                <section className="admin-behavior-card">
-                  <h3>Настройка блока</h3>
+                <section className="admin-behavior-card admin-behavior-inspector-card">
+                  <div className="admin-behavior-side-head">
+                    <div>
+                      <p className="admin-eyebrow">Блок</p>
+                      <h3>{selectedBlock ? getBlockDisplayLabel(selectedBlock) : 'Настройки'}</h3>
+                    </div>
+                    {selectedBlock ? (
+                      <span className="admin-order-status-pill">
+                        {selectedBlock.enabled ? 'on' : 'off'}
+                      </span>
+                    ) : null}
+                  </div>
                   {selectedBlock ? (
                     <BlockInspector
                       block={selectedBlock}
@@ -623,19 +722,32 @@ export function BehaviorView({
                   )}
                 </section>
 
-                <section className="admin-behavior-card">
-                  <h3>Preview prompt</h3>
-                  <p className="admin-muted">
-                    Длина: {preview?.stats.promptLength ?? 0} символов · Активных блоков:{' '}
-                    {preview?.stats.activeBlockCount ?? 0}
-                  </p>
+                <section className="admin-behavior-card admin-behavior-preview-card">
+                  <div className="admin-behavior-side-head">
+                    <div>
+                      <p className="admin-eyebrow">Preview</p>
+                      <h3>Prompt</h3>
+                    </div>
+                    <div className="admin-behavior-stat-pills">
+                      <span>{preview?.stats.promptLength ?? 0} симв.</span>
+                      <span>{preview?.stats.activeBlockCount ?? 0} активн.</span>
+                    </div>
+                  </div>
                   <pre className="admin-behavior-preview">
                     {preview?.compiledPrompt ?? 'Prompt preview появится после загрузки.'}
                   </pre>
                 </section>
 
-                <section className="admin-behavior-card">
-                  <h3>Проверки</h3>
+                <section className="admin-behavior-card admin-behavior-check-card">
+                  <div className="admin-behavior-side-head">
+                    <div>
+                      <p className="admin-eyebrow">Контроль</p>
+                      <h3>Проверки</h3>
+                    </div>
+                    <span className="admin-behavior-check-summary">
+                      {(preview?.errors.length ?? 0) + (preview?.warnings.length ?? 0)}
+                    </span>
+                  </div>
                   {preview?.errors.length ? (
                     <div className="admin-behavior-validation">
                       <strong>Ошибки</strong>
@@ -661,8 +773,13 @@ export function BehaviorView({
                 </section>
 
                 {showVersions ? (
-                  <section className="admin-behavior-card">
-                    <h3>История версий</h3>
+                  <section className="admin-behavior-card admin-behavior-version-card">
+                    <div className="admin-behavior-side-head">
+                      <div>
+                        <p className="admin-eyebrow">Публикации</p>
+                        <h3>История версий</h3>
+                      </div>
+                    </div>
                     <div className="admin-behavior-version-list">
                       {versions.map((version) => (
                         <div key={version.id} className="admin-behavior-version-item">
@@ -709,7 +826,7 @@ function BlockInspector({
 
   return (
     <div className="admin-behavior-form">
-      <p className="admin-muted">{BLOCK_LABELS[block.type]}</p>
+      <p className="admin-muted">{getBlockDisplayLabel(block)}</p>
       {block.type === 'PersonaBlock' ? (
         <>
           <label>
@@ -1014,25 +1131,42 @@ function BlockInspector({
       ) : null}
 
       {block.type === 'ResponseStyleBlock' ? (
-        <>
+        <div className="admin-behavior-style-options">
           {[
-            { key: 'bulletless', label: 'Не использовать лишние списки' },
-            { key: 'askOneQuestionAtATime', label: 'Задавать один вопрос за раз' },
+            {
+              key: 'bulletless',
+              label: 'Без лишних списков',
+              description: 'Ответы остаются короткими и не превращаются в перечни.',
+            },
+            {
+              key: 'askOneQuestionAtATime',
+              label: 'Один вопрос за раз',
+              description: 'Клиент не получает несколько уточнений в одном сообщении.',
+            },
             {
               key: 'mentionOnlyKnownFacts',
-              label: 'Упоминать только подтверждённые факты',
+              label: 'Только подтверждённые факты',
+              description: 'Агент не добавляет детали, которых нет в каталоге или заказе.',
             },
           ].map((item) => (
-            <label key={item.key} className="admin-behavior-checkbox">
+            <label
+              key={item.key}
+              className={`admin-behavior-style-option ${
+                Boolean(block.config[item.key]) ? 'admin-behavior-style-option-active' : ''
+              }`}
+            >
               <input
                 type="checkbox"
                 checked={Boolean(block.config[item.key])}
                 onChange={(event) => updateConfig(item.key, event.target.checked)}
               />
-              <span>{item.label}</span>
+              <span>
+                <strong>{item.label}</strong>
+                <small>{item.description}</small>
+              </span>
             </label>
           ))}
-        </>
+        </div>
       ) : null}
     </div>
   );

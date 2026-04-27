@@ -14,6 +14,8 @@ import { clearToken, loadToken, storeToken } from './auth';
 import { MetricsView } from './MetricsView';
 import { OrdersView } from './OrdersView';
 import { BehaviorView } from './BehaviorView';
+import { AdminNav } from './AdminNav';
+import { LogoutButton } from './LogoutButton';
 
 export function App() {
   const [view, setView] = useState<'chats' | 'orders' | 'metrics' | 'behavior'>(
@@ -166,6 +168,7 @@ export function App() {
       <main className="admin-shell">
         <OrdersView
           token={token}
+          activeView="orders"
           onOpenChats={() => setView('chats')}
           onOpenMetrics={() => setView('metrics')}
           onOpenBehavior={() => setView('behavior')}
@@ -179,6 +182,7 @@ export function App() {
     return (
       <MetricsView
         token={token}
+        activeView="metrics"
         onOpenChats={() => setView('chats')}
         onOpenOrders={() => setView('orders')}
         onOpenBehavior={() => setView('behavior')}
@@ -192,6 +196,7 @@ export function App() {
       <main className="admin-shell admin-shell-behavior">
         <BehaviorView
           token={token}
+          activeView="behavior"
           onOpenChats={() => setView('chats')}
           onOpenOrders={() => setView('orders')}
           onOpenMetrics={() => setView('metrics')}
@@ -209,21 +214,15 @@ export function App() {
             <p className="admin-eyebrow">Operon</p>
             <h1>Диалоги</h1>
           </div>
-          <div className="admin-header-actions">
-            <button type="button" onClick={() => setView('orders')}>
-              Заказы
-            </button>
-            <button type="button" onClick={() => setView('metrics')}>
-              Метрики
-            </button>
-            <button type="button" onClick={() => setView('behavior')}>
-              Поведение AI
-            </button>
-            <button type="button" onClick={handleLogout}>
-              Выйти
-            </button>
-          </div>
+          <LogoutButton onLogout={handleLogout} />
         </header>
+        <AdminNav
+          active="chats"
+          onOpenChats={() => setView('chats')}
+          onOpenOrders={() => setView('orders')}
+          onOpenMetrics={() => setView('metrics')}
+          onOpenBehavior={() => setView('behavior')}
+        />
 
         <div className="admin-conversation-list">
           {conversations.map((conversation) => (

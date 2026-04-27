@@ -8,18 +8,22 @@ import {
   type CourierRecord,
   type OrderRecord,
 } from './api';
+import { AdminNav } from './AdminNav';
+import { LogoutButton } from './LogoutButton';
 import { nextAdminStatuses, ORDER_STATUS_LABEL } from './orderWorkflow';
 
 type Props = {
   token: string;
+  activeView?: 'orders';
   onOpenChats: () => void;
-  onOpenMetrics?: () => void;
-  onOpenBehavior?: () => void;
+  onOpenMetrics: () => void;
+  onOpenBehavior: () => void;
   onLogout: () => void;
 };
 
 export function OrdersView({
   token,
+  activeView = 'orders',
   onOpenChats,
   onOpenMetrics,
   onOpenBehavior,
@@ -70,25 +74,15 @@ export function OrdersView({
             <p className="admin-eyebrow">Operon</p>
             <h1>Заказы</h1>
           </div>
-          <div className="admin-header-actions">
-            <button type="button" onClick={onOpenChats}>
-              Диалоги
-            </button>
-            {onOpenMetrics ? (
-              <button type="button" onClick={onOpenMetrics}>
-                Метрики
-              </button>
-            ) : null}
-            {onOpenBehavior ? (
-              <button type="button" onClick={onOpenBehavior}>
-                Поведение AI
-              </button>
-            ) : null}
-            <button type="button" onClick={onLogout}>
-              Выйти
-            </button>
-          </div>
+          <LogoutButton onLogout={onLogout} />
         </header>
+        <AdminNav
+          active={activeView}
+          onOpenChats={onOpenChats}
+          onOpenOrders={() => undefined}
+          onOpenMetrics={onOpenMetrics}
+          onOpenBehavior={onOpenBehavior}
+        />
         <div className="admin-conversation-list">
           {orders.map((order) => (
             <button

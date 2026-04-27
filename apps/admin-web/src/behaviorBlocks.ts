@@ -23,7 +23,7 @@ export const BLOCK_LABELS: Record<BehaviorBlockType, string> = {
   ToneBlock: 'Тон общения',
   GreetingBlock: 'Приветствие',
   ProductSearchBlock: 'Поиск товара',
-  CollectFieldBlock: 'Сбор поля',
+  CollectFieldBlock: 'Данные клиента',
   ConfirmationBlock: 'Подтверждение заказа',
   CreateOrderBlock: 'Создание заказа',
   StatusCheckBlock: 'Проверка статуса',
