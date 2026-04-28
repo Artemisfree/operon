@@ -53,6 +53,23 @@ export class ChatOrchestratorService {
     const behaviorPrompt = await this.chatBehaviorService.resolveBehaviorPrompt(
       conversation.behaviorVersionId,
     );
+    const systemPrompt = [
+      behaviorPrompt.compiledPrompt,
+      this.buildKnownCustomerPrompt(conversation, input.customerMeta),
+    ]
+      .filter(Boolean)
+      .join('\n\n');
+    const knownCustomerMessage = this.buildKnownCustomerMessage(
+      conversation,
+      input.customerMeta,
+    );
+
+    if (knownCustomerMessage) {
+      messages.unshift({
+        role: 'system',
+        content: knownCustomerMessage,
+      });
+    }
 
     if (!conversation.behaviorVersionId) {
       await this.prisma.conversation.update({
@@ -74,7 +91,7 @@ export class ChatOrchestratorService {
       const initialResponse = await this.llmClient.respond({
         messages,
         conversationId: conversation.id,
-        systemPrompt: behaviorPrompt.compiledPrompt,
+        systemPrompt,
         customerMeta: input.customerMeta,
       });
 
@@ -168,7 +185,7 @@ export class ChatOrchestratorService {
         ? await this.llmClient.respond({
             messages,
             conversationId: conversation.id,
-            systemPrompt: behaviorPrompt.compiledPrompt,
+            systemPrompt,
             customerMeta: input.customerMeta,
             toolResults,
           })
@@ -179,9 +196,12 @@ export class ChatOrchestratorService {
       });
 
       return {
-        reply:
+        reply: this.sanitizeReplyForKnownCustomerData(
           followupResponse.reply ||
-          'Не удалось сформировать ответ. Попробуйте ещё раз.',
+            'Не удалось сформировать ответ. Попробуйте ещё раз.',
+          conversation,
+          input.customerMeta,
+        ),
         agentActions,
         handoffState: refreshedConversation.handoffState,
       };
@@ -212,6 +232,96 @@ export class ChatOrchestratorService {
     }
 
     return 'user';
+  }
+
+  private buildKnownCustomerPrompt(
+    conversation: {
+      customerName: string | null;
+      customerPhone: string | null;
+    },
+    customerMeta?: Record<string, unknown>,
+  ) {
+    const knownFields: string[] = [];
+    const customerName =
+      typeof customerMeta?.name === 'string' && customerMeta.name.trim()
+        ? customerMeta.name.trim()
+        : conversation.customerName?.trim();
+    const customerPhone =
+      typeof customerMeta?.phone === 'string' && customerMeta.phone.trim()
+        ? customerMeta.phone.trim()
+        : conversation.customerPhone?.trim();
+
+    if (customerName) {
+      knownFields.push(`имя клиента: ${customerName}`);
+    }
+
+    if (customerPhone) {
+      knownFields.push(`телефон: ${customerPhone}`);
+    }
+
+    if (!knownFields.length) {
+      return '';
+    }
+
+    return [
+      `Уже известные данные клиента: ${knownFields.join('; ')}.`,
+      'Эти поля уже собраны из формы виджета или текущей беседы.',
+      'Не спрашивай эти данные повторно.',
+      'Если известно имя клиента, не задавай вопросы вроде «Ваше имя?», «Как вас зовут?» или «Подскажите имя».',
+      'Если создаёшь заказ, используй эти значения как уже собранные.',
+    ].join(' ');
+  }
+
+  private buildKnownCustomerMessage(
+    conversation: {
+      customerName: string | null;
+      customerPhone: string | null;
+    },
+    customerMeta?: Record<string, unknown>,
+  ) {
+    const customerName =
+      typeof customerMeta?.name === 'string' && customerMeta.name.trim()
+        ? customerMeta.name.trim()
+        : conversation.customerName?.trim();
+    const customerPhone =
+      typeof customerMeta?.phone === 'string' && customerMeta.phone.trim()
+        ? customerMeta.phone.trim()
+        : conversation.customerPhone?.trim();
+    const knownFields = [
+      customerName ? `Имя клиента уже известно: ${customerName}.` : null,
+      customerPhone ? `Телефон клиента уже известен: ${customerPhone}.` : null,
+    ].filter(Boolean);
+
+    if (!knownFields.length) {
+      return '';
+    }
+
+    return `${knownFields.join(' ')} Не спрашивай уже известные данные повторно.`;
+  }
+
+  private sanitizeReplyForKnownCustomerData(
+    reply: string,
+    conversation: {
+      customerName: string | null;
+    },
+    customerMeta?: Record<string, unknown>,
+  ) {
+    const customerName =
+      typeof customerMeta?.name === 'string' && customerMeta.name.trim()
+        ? customerMeta.name.trim()
+        : conversation.customerName?.trim();
+
+    if (!customerName) {
+      return reply;
+    }
+
+    const sanitized = reply
+      .replace(/(?:^|\s)(?:ваше имя|как вас зовут|подскажите(?:,)? пожалуйста(?:,)? имя|подскажите(?:,)? имя)\??/giu, ' ')
+      .replace(/\s{2,}/g, ' ')
+      .replace(/\s+([?.!,])/g, '$1')
+      .trim();
+
+    return sanitized || `Здравствуйте, ${customerName}. Чем могу помочь с заказом?`;
   }
 
   private async tryCreateOrderFromConfirmation(

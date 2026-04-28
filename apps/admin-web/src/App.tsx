@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 
 import {
   getConversation,
@@ -28,7 +28,32 @@ export function App() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [details, setDetails] = useState<ConversationDetails | null>(null);
   const [operatorText, setOperatorText] = useState('');
+  const [conversationSearch, setConversationSearch] = useState('');
+  const [handoffFilter, setHandoffFilter] = useState<'all' | 'ai' | 'operator'>('all');
   const [error, setError] = useState<string | null>(null);
+
+  const filteredConversations = useMemo(() => {
+    const query = conversationSearch.trim().toLowerCase();
+
+    return conversations.filter((conversation) => {
+      if (handoffFilter !== 'all' && conversation.handoffState !== handoffFilter) {
+        return false;
+      }
+
+      if (!query) {
+        return true;
+      }
+
+      return [
+        conversation.customerName,
+        conversation.customerPhone,
+        conversation.lastMessage?.content,
+        conversation.handoffState,
+      ]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(query));
+    });
+  }, [conversationSearch, conversations, handoffFilter]);
 
   useEffect(() => {
     if (!token) {
@@ -224,8 +249,41 @@ export function App() {
           onOpenBehavior={() => setView('behavior')}
         />
 
+        <div className="admin-conversation-filters">
+          <label className="admin-search-field">
+            <span>Поиск диалога</span>
+            <input
+              value={conversationSearch}
+              onChange={(event) => setConversationSearch(event.target.value)}
+              placeholder="Имя, телефон, сообщение"
+            />
+          </label>
+          <div className="admin-filter-segments" aria-label="Фильтр по состоянию">
+            {[
+              { value: 'all', label: 'Все' },
+              { value: 'ai', label: 'AI' },
+              { value: 'operator', label: 'Оператор' },
+            ].map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                className={
+                  handoffFilter === option.value
+                    ? 'admin-filter-segment admin-filter-segment-active'
+                    : 'admin-filter-segment'
+                }
+                onClick={() =>
+                  setHandoffFilter(option.value as 'all' | 'ai' | 'operator')
+                }
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="admin-conversation-list">
-          {conversations.map((conversation) => (
+          {filteredConversations.map((conversation) => (
             <button
               key={conversation.id}
               className={`admin-conversation-item ${
@@ -243,6 +301,9 @@ export function App() {
               <p>{conversation.lastMessage?.content || 'Сообщений пока нет'}</p>
             </button>
           ))}
+          {filteredConversations.length === 0 ? (
+            <div className="admin-sidebar-empty">Ничего не найдено.</div>
+          ) : null}
         </div>
       </aside>
 

@@ -110,14 +110,16 @@ select {
 .admin-sidebar {
   padding: 18px;
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto auto;
+  align-content: start;
   gap: 12px;
   min-height: 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .admin-behavior-sidebar {
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto auto;
   max-width: 320px;
   padding: 16px;
   gap: 12px;
@@ -132,10 +134,12 @@ select {
 }
 
 .admin-behavior-sidebar-content {
-  min-height: 0;
+  min-height: auto;
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto auto;
   gap: 14px;
+  overflow: visible;
+  padding-right: 4px;
 }
 
 .admin-sidebar-header,
@@ -166,6 +170,11 @@ select {
 .admin-nav {
   display: grid;
   gap: 10px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  padding-bottom: 2px;
+  background: var(--admin-surface);
 }
 
 .admin-nav-segments {
@@ -213,6 +222,79 @@ select {
   display: none;
 }
 
+.admin-conversation-filters {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--admin-border);
+  border-radius: 14px;
+  background: var(--admin-surface-soft);
+}
+
+.admin-search-field {
+  display: grid;
+  gap: 6px;
+}
+
+.admin-search-field span {
+  color: var(--admin-muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.admin-search-field input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--admin-border);
+  border-radius: 10px;
+  padding: 10px 11px;
+  background: var(--admin-surface);
+  color: var(--admin-text);
+}
+
+.admin-search-field input:focus {
+  outline: 3px solid rgba(15, 118, 110, 0.16);
+  border-color: var(--admin-accent);
+}
+
+.admin-filter-segments {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.admin-filter-segment {
+  height: 34px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--admin-muted);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.admin-filter-segment:hover {
+  background: var(--admin-surface);
+  border-color: var(--admin-border);
+  color: var(--admin-text);
+}
+
+.admin-filter-segment-active {
+  background: var(--admin-surface);
+  border-color: var(--admin-accent);
+  color: var(--admin-accent-strong);
+}
+
+.admin-sidebar-empty {
+  border: 1px dashed var(--admin-border);
+  border-radius: 14px;
+  padding: 14px;
+  color: var(--admin-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
 .admin-logout-button {
   flex: 0 0 auto;
   border: 1px solid var(--admin-border);
@@ -248,7 +330,8 @@ select {
   grid-auto-rows: max-content;
   align-content: start;
   gap: 10px;
-  overflow: auto;
+  min-height: auto;
+  overflow: visible;
 }
 
 .admin-conversation-item {
@@ -794,11 +877,9 @@ select {
 }
 
 .admin-behavior-profile-list {
-  max-height: clamp(160px, calc(100vh - 430px), 360px);
-  overflow: auto;
+  overflow: visible;
   display: grid;
   gap: 8px;
-  padding-right: 4px;
 }
 
 .admin-behavior-profile-item {
@@ -1485,6 +1566,10 @@ select {
 
 .admin-sidebar {
   gap: 12px;
+  grid-template-rows: auto auto auto;
+  align-content: start;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .admin-sidebar-header {
@@ -1501,6 +1586,11 @@ select {
 
 .admin-nav {
   gap: 8px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  padding-bottom: 2px;
+  background: var(--admin-surface);
 }
 
 .admin-nav-segments {
@@ -1531,6 +1621,12 @@ select {
   align-content: start;
   gap: 8px;
   padding-right: 4px;
+  overflow: visible;
+}
+
+.admin-behavior-sidebar-content {
+  grid-template-rows: auto auto;
+  overflow: visible;
 }
 
 .admin-conversation-item {
