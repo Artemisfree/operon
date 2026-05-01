@@ -1,9 +1,16 @@
+node_modules
+**/node_modules
+**/.turbo
+**/dist
 .git
 .gitignore
-node_modules
-.turbo
-dist
-coverage
-.next
-*.log
 .env
+.env.*
+*.md
+**/coverage
+**/test
+
+# Frontend sources not needed for API image (workspace package.json stubs remain)
+apps/admin-web/src
+apps/website-widget/src
+apps/courier-web/src
