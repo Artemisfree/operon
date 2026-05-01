@@ -1,0 +1,267 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OrderStatus {
+  pending
+  confirmed
+  preparing
+  ready_for_dispatch
+  on_the_way
+  delivered
+  cancelled
+
+  @@map("order_status")
+}
+
+enum MessageRole {
+  user
+  assistant
+  system
+  tool
+  operator
+
+  @@map("message_role")
+}
+
+enum HandoffState {
+  ai
+  operator
+
+  @@map("handoff_state")
+}
+
+enum AiActionStatus {
+  succeeded
+  failed
+  skipped
+
+  @@map("ai_action_status")
+}
+
+enum ReviewRequestStatus {
+  scheduled
+  sent
+  skipped_no_conversation
+  failed
+
+  @@map("review_request_status")
+}
+
+enum AgentBehaviorVersionStatus {
+  draft
+  published
+  archived
+
+  @@map("agent_behavior_version_status")
+}
+
+model AdminUser {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         String   @default("admin")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("admin_users")
+}
+
+model Conversation {
+  id                String                @id @default(uuid()) @db.Uuid
+  customerName      String?               @map("customer_name")
+  customerPhone     String?               @map("customer_phone")
+  handoffState      HandoffState          @default(ai) @map("handoff_state")
+  behaviorVersionId String?               @map("behavior_version_id") @db.Uuid
+  createdAt         DateTime              @default(now()) @map("created_at")
+  updatedAt         DateTime              @updatedAt @map("updated_at")
+  messages          Message[]
+  aiActionLogs      AiActionLog[]
+  orders            Order[]
+  reviewRequests    ReviewRequest[]
+  behaviorVersion   AgentBehaviorVersion? @relation(fields: [behaviorVersionId], references: [id], onDelete: SetNull)
+
+  @@index([behaviorVersionId])
+  @@map("conversations")
+}
+
+model Message {
+  id             String       @id @default(uuid()) @db.Uuid
+  conversationId String       @db.Uuid @map("conversation_id")
+  role           MessageRole
+  content        String
+  metadata       Json?
+  createdAt      DateTime     @default(now()) @map("created_at")
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
+}
+
+model AiActionLog {
+  id             String         @id @default(uuid()) @db.Uuid
+  conversationId String         @db.Uuid @map("conversation_id")
+  behaviorVersionId String?     @db.Uuid @map("behavior_version_id")
+  actionType     String         @map("action_type")
+  toolName       String?        @map("tool_name")
+  status         AiActionStatus @default(succeeded)
+  model          String?
+  input          Json?
+  output         Json?
+  error          String?
+  createdAt      DateTime       @default(now()) @map("created_at")
+  conversation   Conversation   @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  behaviorVersion AgentBehaviorVersion? @relation(fields: [behaviorVersionId], references: [id], onDelete: SetNull)
+
+  @@index([conversationId, createdAt])
+  @@index([behaviorVersionId, createdAt])
+  @@map("ai_action_logs")
+}
+
+model AgentBehaviorProfile {
+  id          String                 @id @default(uuid()) @db.Uuid
+  name        String
+  code        String                 @unique
+  description String?
+  isDefault   Boolean                @default(false) @map("is_default")
+  createdAt   DateTime               @default(now()) @map("created_at")
+  updatedAt   DateTime               @updatedAt @map("updated_at")
+  versions    AgentBehaviorVersion[]
+
+  @@map("agent_behavior_profiles")
+}
+
+model AgentBehaviorVersion {
+  id             String                      @id @default(uuid()) @db.Uuid
+  profileId      String                      @map("profile_id") @db.Uuid
+  version        Int
+  status         AgentBehaviorVersionStatus  @default(draft)
+  definition     Json
+  compiledPrompt String                      @map("compiled_prompt")
+  createdBy      String?                     @map("created_by")
+  publishedAt    DateTime?                   @map("published_at")
+  createdAt      DateTime                    @default(now()) @map("created_at")
+  updatedAt      DateTime                    @updatedAt @map("updated_at")
+  profile        AgentBehaviorProfile        @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  conversations  Conversation[]
+  aiActionLogs   AiActionLog[]
+
+  @@unique([profileId, version])
+  @@index([profileId, status])
+  @@map("agent_behavior_versions")
+}
+
+model Product {
+  id          String      @id @default(uuid()) @db.Uuid
+  name        String
+  description String?
+  price       Decimal     @db.Decimal(10, 2)
+  currency    String      @default("RUB")
+  isActive    Boolean     @default(true) @map("is_active")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+  orderItems  OrderItem[]
+
+  @@map("products")
+  @@unique([name])
+}
+
+model Order {
+  id              String               @id @default(uuid()) @db.Uuid
+  customerName    String               @map("customer_name")
+  customerPhone   String               @map("customer_phone")
+  deliveryAddress String               @map("delivery_address")
+  comment         String?
+  status          OrderStatus          @default(pending)
+  totalAmount     Decimal              @db.Decimal(10, 2) @map("total_amount")
+  conversationId  String?              @map("conversation_id") @db.Uuid
+  createdAt       DateTime             @default(now()) @map("created_at")
+  updatedAt       DateTime             @updatedAt @map("updated_at")
+  items           OrderItem[]
+  statusHistory   OrderStatusHistory[]
+  deliveryJob     DeliveryJob?
+  conversation    Conversation?      @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  reviewRequest   ReviewRequest?
+
+  @@index([conversationId])
+  @@map("orders")
+}
+
+model ReviewRequest {
+  id               String               @id @default(uuid()) @db.Uuid
+  orderId          String               @unique @map("order_id") @db.Uuid
+  conversationId   String?              @map("conversation_id") @db.Uuid
+  status           ReviewRequestStatus  @default(scheduled)
+  scheduledAt      DateTime             @map("scheduled_at")
+  sentAt           DateTime?            @map("sent_at")
+  errorMessage     String?              @map("error_message")
+  createdAt        DateTime             @default(now()) @map("created_at")
+  updatedAt        DateTime             @updatedAt @map("updated_at")
+  order            Order                @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  conversation     Conversation?        @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+
+  @@index([status, scheduledAt])
+  @@map("review_requests")
+}
+
+model Courier {
+  id           String        @id @default(uuid()) @db.Uuid
+  displayName  String        @map("display_name")
+  phone        String?
+  isActive     Boolean       @default(true) @map("is_active")
+  apiTokenHash String        @map("api_token_hash")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  deliveryJobs DeliveryJob[]
+
+  @@map("couriers")
+}
+
+model DeliveryJob {
+  id             String    @id @default(uuid()) @db.Uuid
+  orderId        String    @unique @db.Uuid @map("order_id")
+  courierId      String    @db.Uuid @map("courier_id")
+  proofPhotoData String?   @map("proof_photo_data")
+  assignedAt     DateTime  @default(now()) @map("assigned_at")
+  deliveredAt    DateTime? @map("delivered_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  order          Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  courier        Courier   @relation(fields: [courierId], references: [id], onDelete: Restrict)
+
+  @@index([courierId])
+  @@map("delivery_jobs")
+}
+
+model OrderItem {
+  id         String   @id @default(uuid()) @db.Uuid
+  orderId    String   @db.Uuid @map("order_id")
+  productId  String   @db.Uuid @map("product_id")
+  quantity   Int
+  unitPrice  Decimal  @db.Decimal(10, 2) @map("unit_price")
+  createdAt  DateTime @default(now()) @map("created_at")
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_items")
+}
+
+model OrderStatusHistory {
+  id          String      @id @default(uuid()) @db.Uuid
+  orderId     String      @db.Uuid @map("order_id")
+  status      OrderStatus
+  changedBy   String?     @map("changed_by")
+  note        String?
+  createdAt   DateTime    @default(now()) @map("created_at")
+  order       Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, createdAt])
+  @@map("order_status_history")
+}

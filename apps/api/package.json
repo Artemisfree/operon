@@ -1,0 +1,44 @@
+{
+  "name": "@operon/api",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsx watch --clear-screen=false src/main.ts",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "prisma:migrate:dev": "prisma migrate dev",
+    "prisma:seed": "tsx prisma/seed.ts",
+    "start": "node dist/main.js",
+    "test": "node --test --test-concurrency=1 --import tsx test/delivery.schemas.unit.test.ts test/chat-behavior.unit.test.ts test/mock-llm.unit.test.ts test/app.integration.test.ts test/delivery.integration.test.ts test/review.integration.test.ts",
+    "test:unit": "node --test --import tsx test/delivery.schemas.unit.test.ts test/chat-behavior.unit.test.ts test/mock-llm.unit.test.ts",
+    "test:integration": "node --test --test-concurrency=1 --import tsx test/app.integration.test.ts test/delivery.integration.test.ts test/review.integration.test.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.7.0",
+    "@nestjs/common": "^11.1.6",
+    "@nestjs/config": "^4.0.2",
+    "@nestjs/core": "^11.1.6",
+    "@nestjs/platform-express": "^11.1.6",
+    "@nestjs/schedule": "^5.0.1",
+    "bcryptjs": "^3.0.2",
+    "jsonwebtoken": "^9.0.2",
+    "openai": "^6.7.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "zod": "^4.1.5"
+  },
+  "devDependencies": {
+    "@nestjs/testing": "^11.1.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^24.6.0",
+    "prisma": "^6.7.0",
+    "supertest": "^7.1.4",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  }
+}

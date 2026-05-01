@@ -85,6 +85,8 @@
 
 ### Dispatch
 - `POST /api/delivery/assign`
+- `GET /api/delivery/jobs` (курьер, Bearer-токен)
+- `GET /api/couriers` (admin)
 - `POST /api/delivery/:id/status`
 - `POST /api/delivery/:id/proof-photo`
 
@@ -110,6 +112,142 @@
 ---
 
 ## 7) Machine-executable roadmap для AI-агента
+
+## Текущий статус реализации (2026-04-06)
+
+### Phase A — Foundation
+- Статус: **реализован**
+
+### Phase B — AI Core
+- Статус: **реализован в MVP-виде**
+
+### Phase C — Website Chat + Handoff
+- Статус: **backend + frontend MVP slice реализован**
+
+### Phase D — Processing + Delivery
+- Статус: **реализован в MVP-виде** (backend + admin-web + courier-web)
+
+### Phase E — Review + Stabilization
+- Статус: **реализован в MVP-виде** (backend + admin-web метрики)
+
+### Что уже сделано
+- Поднят backend skeleton на `NestJS + TypeScript`.
+- Локальная разработка переведена на `Docker Compose`.
+- Поднят `PostgreSQL` как отдельный контейнер.
+- Подключён `Prisma`.
+- Добавлены миграции и initial schema.
+- Созданы таблицы `admin_users`, `products`, `orders`, `order_items`, `order_status_history`.
+- Реализован минимальный `admin-auth` с login endpoint и `Bearer` token guard.
+- Реализован CRUD для `products`.
+- Реализован API для `orders`.
+- Реализован status workflow для заказа с проверкой допустимых переходов и записью в `order_status_history`.
+- Добавлены seed-данные: 1 admin user и demo products.
+- Добавлены integration tests для ключевых backend-потоков.
+- README обновлён под фактический способ запуска через Docker.
+- Добавлен `ChatModule` с endpoint `POST /api/chat/message`.
+- Подключён AI orchestrator с поддержкой tool execution.
+- Добавлен OpenAI integration layer.
+- Добавлен `mock`-LLM режим для детерминированных integration tests.
+- Реализованы инструменты AI-агента:
+  - `find_product`
+  - `create_order`
+  - `get_order_status`
+  - `start_handoff`
+  - `append_operator_note`
+- Добавлены таблицы `conversations`, `messages`, `ai_action_logs`.
+- Подключён лог действий AI в `ai_action_logs`.
+- Добавлен polling endpoint для website widget: `GET /api/chat/conversations/:id/messages`.
+- Добавлены admin/operator endpoints для списка и карточки диалогов.
+- Добавлен operator reply endpoint.
+- Добавлен ручной handoff через admin endpoints.
+- AI перестаёт отправлять автоответы во время handoff.
+- После `handoff stop` управление корректно возвращается AI.
+- Добавлен frontend app `website-widget`.
+- Добавлен frontend app `admin-web`.
+- `website-widget` умеет:
+  - отправлять сообщения в backend;
+  - опрашивать историю сообщений;
+  - отображать handoff state;
+  - показывать operator replies.
+- `admin-web` умеет:
+  - выполнять login оператора;
+  - показывать список диалогов;
+  - открывать карточку диалога;
+  - включать и выключать handoff;
+  - отправлять сообщения оператора.
+- Миграция `20260406120000_phase_d_delivery`: таблицы `couriers`, `delivery_jobs`; заказ связан с доставкой (`deliveryJob`).
+- API доставки: `POST /api/delivery/assign` (admin), `GET /api/delivery/jobs`, `POST /api/delivery/:id/status`, `POST /api/delivery/:id/proof-photo` (курьер по Bearer-токену); `GET /api/couriers` (admin).
+- `CourierAuthGuard`: сопоставление Bearer-токена с `bcrypt`-хэшем в БД (перебор активных курьеров, MVP-масштаб).
+- Seed: демо-курьер и токен `courier-dev-token` (см. `prisma/seed.ts`).
+- Integration test: сценарий `assign → on_the_way → proof → delivered`.
+- Тесты: unit (`delivery.schemas`, Zod), расширенные integration по доставке/курьерам (`test/delivery.integration.test.ts`); фронт — Vitest (`orderWorkflow`, нормализация API URL, auth-константы). `pnpm --filter @operon/api test:unit` без Postgres; полный `test` / `test:integration` — с БД (см. README).
+- `admin-web`: раздел **«Заказы»** — список, карточка, смена статуса по workflow, **назначение курьера** для `ready_for_dispatch`.
+- Frontend app **`courier-web`**: ввод токена, список доставок, загрузка фото подтверждения, кнопка «Доставлено».
+- **CORS** (`apps/api/src/main.ts`): для dev разрешены origin `http://localhost:3001–3003` и `http://127.0.0.1:3001–3003`; для других URL — env **`CORS_ORIGINS`** (через запятую). Иначе браузер блокирует login с Vite на другом порту.
+- **Postgres с хоста:** внешний порт **9432** (`POSTGRES_PORT` в `docker-compose`); для Prisma/CLI на машине — `DATABASE_URL` с `127.0.0.1:9432` (см. `.env.example`). У сервиса `api` в compose задан свой внутренний `DATABASE_URL` на `postgres:5432`, чтобы не путать с URL для хоста.
+- **Mock-LLM** (`mock-llm.service.ts`): если из ответа пользователя не извлекается товар по regex, выполняется fallback `хочу <текст пользователя>`, чтобы короткий ответ («Капучино 300 мл») не зацикливал фразу «Уточните товар».
+- **Скрипты тестов API:** `pnpm --filter @operon/api test:unit` — только Zod, без БД; `test:integration` — integration; полный `test` — всё вместе (см. README).
+- **Phase E — review:** миграция `20260406180000_phase_e_review`: таблица `review_requests`; у заказа опционально `conversation_id` (связь с чатом, проставляется при `create_order` из виджета). После `delivered` (курьер или admin status) создаётся запись review с `scheduled_at = now + REVIEW_DELAY_MINUTES` (env, по умолчанию 7). Раз в минуту cron обрабатывает просроченные `scheduled` записи: в чат уходит сообщение assistant с просьбой об отзыве; без диалога — статус `skipped_no_conversation`. Idempotency: одна запись на заказ. API: `POST /api/review/schedule`, `POST /api/review/send` (admin JWT); `GET /api/admin/metrics` — заказы, delivered %, handoff % (диалоги с хотя бы одним сообщением оператора), число отправленных review. **admin-web:** экран «Метрики».
+
+### Соответствие презентации (operon - deck.pdf)
+- Совпадает: intake с AI + **ручной перехват оператором**, БД заказов/статусов, **доставка и proof**, **review после доставки** (review — Phase E в плане).
+- Узкий MVP в коде: канал **только Website** (в deck — также WhatsApp/Telegram); уведомления курьерам в мессенджерах **не** делались — вместо этого **`courier-web`** и те же API.
+
+### Что подтверждено
+- Контейнеры `api` и `postgres` поднимаются через Docker.
+- Миграция `20260402120000_init` применяется успешно.
+- Миграция `20260403090000_phase_b_ai_core` применяется успешно.
+- Миграция `20260406120000_phase_d_delivery` применяется успешно.
+- Integration tests проходят зелёными:
+  - создание заказа;
+  - смена статуса заказа;
+  - запрет невалидного перехода статуса;
+  - защита admin endpoints;
+  - создание и чтение products под admin-auth.
+  - создание заказа через `POST /api/chat/message`;
+  - regression: AI не создаёт заказ без обязательных полей.
+- Real OpenAI runtime подключён через `.env` и smoke-проверен:
+  - `AI_PROVIDER=openai` стартует корректно;
+  - `POST /api/chat/message` доходит до реального OpenAI API;
+  - tool-calling c `find_product` работает;
+  - guardrail на обязательное подтверждение соблюдается;
+  - двухшаговый сценарий `message -> confirmation -> create_order` проходит успешно;
+  - создан и подтверждён реальный order `080153b2-a772-4199-b6af-67840f76fb4e`.
+- Integration tests Phase C проходят зелёными:
+  - polling-style получение истории сообщений;
+  - список диалогов для operator/admin;
+  - operator handoff;
+  - operator manual reply;
+  - возврат чата AI после `handoff stop`.
+- Frontend verification проходит:
+  - `website-widget` unit test;
+  - `admin-web` unit test;
+  - typecheck обоих frontend apps;
+  - production build обоих frontend apps.
+- После добавления `courier-web`: typecheck и production build для трёх frontend apps (widget, admin, courier).
+
+### Что ещё остаётся
+- Добавить unit tests для моделей/валидации.
+- При желании вынести Prisma config из `package.json`, чтобы убрать deprecation warning Prisma 7.
+- При желании можно ещё дополнительно дотюнить prompt, но критичный gap multi-turn подтверждения уже закрыт backend-логикой.
+- Для полного закрытия Phase C по исходному roadmap всё ещё нет realtime через WebSocket, пока используется polling.
+- **Phase E (MVP):** закрыт по review + метрикам; дальше — полировка, observability, e2e-smoke по полному циклу при необходимости.
+- **Продуктовые хвосты (бэклог):** человекочитаемый номер заказа для клиента (вместо UUID в тексте бота); CRUD каталога в UI admin-web (API уже есть); отдельный канал review (SMS/email) вне чата — не в MVP.
+
+### 7.1 Handoff для следующей сессии
+- **Сделано по ветке MVP:** Phase A–E в объёме выше; сиды: admin `admin@operon.local`, товары, курьер + `courier-dev-token`.
+- **Дев-порты:** API `3000`, widget `3001`, admin `3002`, courier `3003` (Vite `dev`, не прод).
+- **Запуск:** `docker compose up -d` (Postgres + api); при необходимости `docker compose exec api pnpm --filter @operon/api prisma:seed`; фронты локально `pnpm --filter @operon/<app> dev` или внутри контейнера api (см. README).
+- **LLM:** `AI_PROVIDER=openai` + ключ — реальный OpenAI; `mock` — без сети, детерминированный сценарий.
+- **Review:** `REVIEW_DELAY_MINUTES` (по умолчанию 7); после `delivered` планируется сообщение в чат; админ: «Метрики», API `GET /api/admin/metrics`, ручной прогон очереди `POST /api/review/send`.
+- **Следующий шаг кода (по желанию):** e2e-smoke «чат → заказ → доставка → review»; WebSocket вместо polling; продуктовые хвосты из бэклога.
+
+### 7.2 MVP Readiness Artifacts (2026-04-15)
+- Добавлен пошаговый runbook: [MVP_SMOKE_CHECKLIST.md](/Users/artemnadtoceev/dev/operon/MVP_SMOKE_CHECKLIST.md)
+- Добавлена матрица критериев: [MVP_ACCEPTANCE_MATRIX.md](/Users/artemnadtoceev/dev/operon/MVP_ACCEPTANCE_MATRIX.md)
+- Зафиксирован финальный gate/status: [MVP_STATUS.md](/Users/artemnadtoceev/dev/operon/MVP_STATUS.md)
+- Текущий статус в документации: `MVP Ready with Known Limitations`
+- Ограничения для sign-off: нужен повторный прогон полного smoke в живом локальном окружении; из текущего sandbox не подтверждаются Docker/network-зависимые шаги
 
 ## Phase A — Foundation (Week 1)
 ### Задачи
@@ -180,6 +318,11 @@
 ### Тест-гейт
 - integration: delay job отрабатывает один раз (idempotency).
 - smoke: полный сценарий от чата до review.
+
+### Статус реализации (MVP)
+- E1: cron `EVERY_MINUTE` + `review_requests`, env `REVIEW_DELAY_MINUTES` (по умолчанию 7); сообщение в чат для заказов с `conversation_id`.
+- E2: `GET /api/admin/metrics` + экран «Метрики» в admin-web.
+- E3: минимальный hardening (типизация OpenAI guard, дубликат import в products.service); полный e2e-smoke — отдельно.
 
 ---
 
