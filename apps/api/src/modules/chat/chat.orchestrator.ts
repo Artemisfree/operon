@@ -1,4 +1,5 @@
 import {
+  HttpException,
   Inject,
   Injectable,
   InternalServerErrorException,
@@ -220,8 +221,12 @@ export class ChatOrchestratorService {
         },
       });
 
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
       throw new InternalServerErrorException(
-        'AI orchestration failed. Please try again later.',
+        error instanceof Error ? error.message : 'Unknown orchestrator failure',
       );
     }
   }

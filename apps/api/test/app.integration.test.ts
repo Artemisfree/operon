@@ -435,6 +435,21 @@ describe('API integration', () => {
     assert.equal(actionLogs.at(-1)?.toolName, 'create_order');
   });
 
+  it('returns the tool validation error when deterministic chat order creation fails', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/chat/message')
+      .send({
+        text: 'Хочу заказать 1 Несуществующий напиток. Телефон: +79990000000. Адрес: Москва, Тверская 1. Подтверждаю заказ.',
+      })
+      .expect(404);
+
+    assert.equal(response.body.statusCode, 404);
+    assert.match(response.body.message, /No product found/i);
+
+    const orders = await prisma.order.findMany();
+    assert.equal(orders.length, 0);
+  });
+
   it('does not create an order from chat without required fields', async () => {
     await prisma.product.create({
       data: {
