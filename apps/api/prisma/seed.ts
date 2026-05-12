@@ -71,6 +71,9 @@ const DEMO_ORDER_IDS = [
   '20000000-0000-4000-8000-000000000002',
   '20000000-0000-4000-8000-000000000003',
   '20000000-0000-4000-8000-000000000004',
+  '20000000-0000-4000-8000-000000000005',
+  '20000000-0000-4000-8000-000000000006',
+  '20000000-0000-4000-8000-000000000007',
 ] as const;
 
 function hoursAgo(hours: number) {
@@ -601,6 +604,231 @@ async function seedDemoShowcase() {
           status: ReviewRequestStatus.sent,
           scheduledAt: minutesAgo(55),
           sentAt: minutesAgo(45),
+        },
+      },
+    },
+  });
+
+  const orderRushDelivery = await prisma.order.create({
+    data: {
+      id: DEMO_ORDER_IDS[4],
+      customerName: 'Павел',
+      customerPhone: '+79990000006',
+      deliveryAddress: 'Москва, Цветной бульвар 21, подъезд 2',
+      comment: 'Срочно к переговорной, клиент ждёт гостей',
+      status: OrderStatus.on_the_way,
+      totalAmount: new Prisma.Decimal('1470.00'),
+      createdAt: minutesAgo(58),
+      items: {
+        create: [
+          {
+            productId: cappuccino.id,
+            quantity: 3,
+            unitPrice: cappuccino.price,
+          },
+          {
+            productId: sandwich.id,
+            quantity: 2,
+            unitPrice: sandwich.price,
+          },
+          {
+            productId: cheesecake.id,
+            quantity: 1,
+            unitPrice: cheesecake.price,
+          },
+        ],
+      },
+      statusHistory: {
+        create: [
+          {
+            status: OrderStatus.pending,
+            note: 'Создан оператором для офисной доставки',
+            changedBy: 'admin@operon.local',
+            createdAt: minutesAgo(58),
+          },
+          {
+            status: OrderStatus.confirmed,
+            note: 'Состав и срочность подтверждены',
+            changedBy: 'admin@operon.local',
+            createdAt: minutesAgo(55),
+          },
+          {
+            status: OrderStatus.preparing,
+            note: 'Кухня взяла заказ в работу',
+            changedBy: 'admin@operon.local',
+            createdAt: minutesAgo(50),
+          },
+          {
+            status: OrderStatus.ready_for_dispatch,
+            note: 'Упакован в два пакета',
+            changedBy: 'admin@operon.local',
+            createdAt: minutesAgo(34),
+          },
+          {
+            status: OrderStatus.on_the_way,
+            note: `Courier assigned (${demoCourier.displayName})`,
+            changedBy: 'admin@operon.local',
+            createdAt: minutesAgo(31),
+          },
+        ],
+      },
+      deliveryJob: {
+        create: {
+          courierId: demoCourier.id,
+          assignedAt: minutesAgo(31),
+        },
+      },
+    },
+  });
+
+  const orderDemoDelivered = await prisma.order.create({
+    data: {
+      id: DEMO_ORDER_IDS[5],
+      customerName: 'Светлана',
+      customerPhone: '+79990000007',
+      deliveryAddress: 'Москва, Остоженка 4',
+      comment: 'Передать лично, сдача не нужна',
+      status: OrderStatus.delivered,
+      totalAmount: new Prisma.Decimal('880.00'),
+      createdAt: hoursAgo(6),
+      items: {
+        create: [
+          {
+            productId: raf.id,
+            quantity: 2,
+            unitPrice: raf.price,
+          },
+          {
+            productId: juice.id,
+            quantity: 1,
+            unitPrice: juice.price,
+          },
+          {
+            productId: cheesecake.id,
+            quantity: 1,
+            unitPrice: cheesecake.price,
+          },
+        ],
+      },
+      statusHistory: {
+        create: [
+          {
+            status: OrderStatus.pending,
+            note: 'Создан через AI-чат',
+            changedBy: 'ai',
+            createdAt: hoursAgo(6),
+          },
+          {
+            status: OrderStatus.confirmed,
+            note: 'Клиент подтвердил заказ',
+            changedBy: 'ai',
+            createdAt: hoursAgo(5.9),
+          },
+          {
+            status: OrderStatus.preparing,
+            note: 'Готовится',
+            changedBy: 'admin@operon.local',
+            createdAt: hoursAgo(5.6),
+          },
+          {
+            status: OrderStatus.ready_for_dispatch,
+            note: 'Готов к передаче',
+            changedBy: 'admin@operon.local',
+            createdAt: hoursAgo(5.2),
+          },
+          {
+            status: OrderStatus.on_the_way,
+            note: `Courier assigned (${demoCourier.displayName})`,
+            changedBy: 'admin@operon.local',
+            createdAt: hoursAgo(5),
+          },
+          {
+            status: OrderStatus.delivered,
+            note: 'Marked delivered by courier',
+            changedBy: `courier:${demoCourier.id}`,
+            createdAt: hoursAgo(4.6),
+          },
+        ],
+      },
+      deliveryJob: {
+        create: {
+          courierId: demoCourier.id,
+          assignedAt: hoursAgo(5),
+          deliveredAt: hoursAgo(4.6),
+          proofPhotoData: 'demo-proof-photo-base64',
+        },
+      },
+    },
+  });
+
+  const orderDemoCancelled = await prisma.order.create({
+    data: {
+      id: DEMO_ORDER_IDS[6],
+      customerName: 'Дмитрий',
+      customerPhone: '+79990000008',
+      deliveryAddress: 'Москва, Новый Арбат 15',
+      comment: 'Клиент отменил после выезда курьера',
+      status: OrderStatus.cancelled,
+      totalAmount: new Prisma.Decimal('560.00'),
+      createdAt: hoursAgo(7),
+      items: {
+        create: [
+          {
+            productId: latte.id,
+            quantity: 1,
+            unitPrice: latte.price,
+          },
+          {
+            productId: cheesecake.id,
+            quantity: 1,
+            unitPrice: cheesecake.price,
+          },
+        ],
+      },
+      statusHistory: {
+        create: [
+          {
+            status: OrderStatus.pending,
+            note: 'Создан через чат',
+            changedBy: 'ai',
+            createdAt: hoursAgo(7),
+          },
+          {
+            status: OrderStatus.confirmed,
+            note: 'Клиент подтвердил заказ',
+            changedBy: 'ai',
+            createdAt: hoursAgo(6.9),
+          },
+          {
+            status: OrderStatus.preparing,
+            note: 'Передан в приготовление',
+            changedBy: 'admin@operon.local',
+            createdAt: hoursAgo(6.7),
+          },
+          {
+            status: OrderStatus.ready_for_dispatch,
+            note: 'Готов к доставке',
+            changedBy: 'admin@operon.local',
+            createdAt: hoursAgo(6.3),
+          },
+          {
+            status: OrderStatus.on_the_way,
+            note: `Courier assigned (${demoCourier.displayName})`,
+            changedBy: 'admin@operon.local',
+            createdAt: hoursAgo(6.1),
+          },
+          {
+            status: OrderStatus.cancelled,
+            note: 'Клиент отменил доставку по телефону',
+            changedBy: 'admin@operon.local',
+            createdAt: hoursAgo(5.8),
+          },
+        ],
+      },
+      deliveryJob: {
+        create: {
+          courierId: demoCourier.id,
+          assignedAt: hoursAgo(6.1),
         },
       },
     },

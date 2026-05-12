@@ -24,6 +24,25 @@ export type CourierJob = {
     status: string;
     totalAmount: number;
     comment: string | null;
+    createdAt: string;
+    updatedAt: string;
+    items: Array<{
+      id: string;
+      quantity: number;
+      unitPrice: number;
+      product: {
+        id: string;
+        name: string;
+        description: string | null;
+      };
+    }>;
+    statusHistory: Array<{
+      id: string;
+      status: string;
+      note: string | null;
+      changedBy: string | null;
+      createdAt: string;
+    }>;
   };
 };
 
@@ -45,7 +64,14 @@ async function courierRequest<T>(path: string, token: string, init?: RequestInit
   });
 
   if (!response.ok) {
-    throw new Error(`Request failed with status ${response.status}`);
+    const payload = (await response.json().catch(() => null)) as {
+      message?: string | string[];
+    } | null;
+    const message = Array.isArray(payload?.message)
+      ? payload.message.join(', ')
+      : payload?.message;
+
+    throw new Error(message || `Request failed with status ${response.status}`);
   }
 
   return (await response.json()) as T;
