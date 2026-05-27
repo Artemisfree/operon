@@ -36,7 +36,7 @@ docker compose up --build -d
 5. Проверить, что backend отвечает:
 
 ```bash
-curl http://localhost:3000/api/health
+curl http://localhost:3004/api/health
 ```
 
 Ожидаемый ответ:
@@ -85,10 +85,32 @@ corepack pnpm --filter @operon/website-widget test
 
 ## Local Dev
 
-- API base URL: `http://localhost:3000/api`
+- API base URL: `http://localhost:3004/api`
 - Healthcheck: `GET /api/health`
 - Postgres host from Docker network: `postgres:5432` (внутри compose)
 - Postgres host from local machine: `localhost:9432` (проброс по умолчанию в `docker-compose.yml`)
+
+### Website Widget Embed
+
+В dev-режиме виджет можно подключить на любой сайт одним script-тегом:
+
+```html
+<script
+  src="http://localhost:3001/embed.js"
+  data-api-base-url="http://localhost:3004/api"
+  data-brand="FLOR Dubai"
+  defer
+></script>
+```
+
+Для FLOR Dubai `operon` может использовать внешний storefront-каталог и заказы:
+
+```bash
+CATALOG_PROVIDER=flor
+FLOR_API_BASE_URL=http://localhost:8001
+```
+
+Если `operon` API запущен в Docker, compose по умолчанию ходит к FLOR backend через `http://host.docker.internal:8001`.
 - Widget dev URL: `http://localhost:3001`
 - Admin dev URL: `http://localhost:3002`
 - Courier dev URL: `http://localhost:3003`
@@ -108,7 +130,7 @@ docker compose up --build -d
 Если нужен явный backend URL для Vite:
 
 ```bash
-VITE_API_BASE_URL=http://localhost:3000/api
+VITE_API_BASE_URL=http://localhost:3004/api
 ```
 
 Посмотреть логи конкретного UI:
@@ -307,7 +329,7 @@ AI_PROVIDER=mock
 Пример login:
 
 ```bash
-curl -X POST http://localhost:3000/api/admin/auth/login \
+curl -X POST http://localhost:3004/api/admin/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "admin@operon.local",
@@ -318,7 +340,7 @@ curl -X POST http://localhost:3000/api/admin/auth/login \
 Пример chat message:
 
 ```bash
-curl -X POST http://localhost:3000/api/chat/message \
+curl -X POST http://localhost:3004/api/chat/message \
   -H "Content-Type: application/json" \
   -d '{
     "text": "Хочу заказать 2 Капучино 300 мл. Телефон: +79990000000. Адрес: Москва, Тверская 1. Подтверждаю заказ.",
@@ -331,7 +353,7 @@ curl -X POST http://localhost:3000/api/chat/message \
 Пример polling запроса для widget:
 
 ```bash
-curl http://localhost:3000/api/chat/conversations/<conversation_id>/messages
+curl http://localhost:3004/api/chat/conversations/<conversation_id>/messages
 ```
 
 ## Tests

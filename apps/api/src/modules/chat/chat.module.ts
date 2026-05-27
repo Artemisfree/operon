@@ -11,6 +11,7 @@ import { LLM_CLIENT } from './chat.constants.js';
 import { ChatOrchestratorService } from './chat.orchestrator.js';
 import { ChatService } from './chat.service.js';
 import { ChatToolService } from './chat.tool-service.js';
+import { FlorStorefrontService } from './flor-storefront.service.js';
 import { MockLlmService } from './llm/mock-llm.service.js';
 import { OpenAiLlmService } from './llm/openai-llm.service.js';
 
@@ -20,6 +21,7 @@ import { OpenAiLlmService } from './llm/openai-llm.service.js';
   providers: [
     ChatService,
     ChatToolService,
+    FlorStorefrontService,
     ChatOrchestratorService,
     MockLlmService,
     OpenAiLlmService,

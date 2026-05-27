@@ -16,7 +16,7 @@ RUN pnpm --filter @operon/api build
 
 ENV NODE_ENV=production
 
-EXPOSE 3000
+EXPOSE 3004
 
 # Railway injects PORT; Nest reads process.env.PORT
 CMD ["sh", "-c", "pnpm --filter @operon/api prisma:migrate:deploy && pnpm --filter @operon/api start"]

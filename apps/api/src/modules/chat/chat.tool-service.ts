@@ -4,23 +4,29 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 
 import { serializeValue } from '../../common/serialization.js';
 import { PrismaService } from '../db/prisma.service.js';
 import { OrdersService } from '../orders/orders.service.js';
 import { ProductsService } from '../products/products.service.js';
+import { FlorStorefrontService } from './flor-storefront.service.js';
 
 type CreateOrderToolInput = {
   customerName?: string;
   customerPhone: string;
   deliveryAddress: string;
   comment?: string;
+  deliveryDate?: string;
+  deliverySlotStart?: string;
+  deliverySlotEnd?: string;
   confirmed: boolean;
   conversationId?: string;
   items: Array<{
     productQuery: string;
     quantity: number;
+    variantQuery?: string;
   }>;
 };
 
@@ -28,8 +34,11 @@ type CreateOrderToolInput = {
 export class ChatToolService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(ConfigService) private readonly configService: ConfigService,
     @Inject(OrdersService) private readonly ordersService: OrdersService,
     @Inject(ProductsService) private readonly productsService: ProductsService,
+    @Inject(FlorStorefrontService)
+    private readonly florStorefrontService: FlorStorefrontService,
   ) {}
 
   async findProduct(query: string) {
@@ -37,6 +46,10 @@ export class ChatToolService {
 
     if (!normalizedQuery) {
       throw new BadRequestException('Product query is required');
+    }
+
+    if (this.isFlorCatalog()) {
+      return this.florStorefrontService.findProducts(normalizedQuery);
     }
 
     const products = await this.prisma.product.findMany({
@@ -69,6 +82,10 @@ export class ChatToolService {
 
     if (!input.items.length) {
       throw new BadRequestException('At least one item is required');
+    }
+
+    if (this.isFlorCatalog()) {
+      return this.florStorefrontService.createOrder(input);
     }
 
     const resolvedItems = [];
@@ -114,6 +131,10 @@ export class ChatToolService {
   }
 
   async getOrderStatus(orderId: string) {
+    if (this.isFlorCatalog()) {
+      return this.florStorefrontService.getOrderStatus(orderId);
+    }
+
     const order = await this.ordersService.findOne(orderId);
     return {
       orderId,
@@ -158,10 +179,23 @@ export class ChatToolService {
     return serializeValue(note);
   }
 
+  async listDeliverySlots(days?: number) {
+    if (!this.isFlorCatalog()) {
+      return {
+        message:
+          'Delivery slot lookup is only configured for external storefront providers.',
+      };
+    }
+
+    return this.florStorefrontService.listDeliverySlots(days);
+  }
+
   async executeTool(name: string, args: Record<string, unknown>) {
     switch (name) {
       case 'find_product':
         return this.findProduct(String(args.query ?? ''));
+      case 'list_delivery_slots':
+        return this.listDeliverySlots(Number(args.days ?? 7));
       case 'create_order':
         return this.createOrder(args as unknown as CreateOrderToolInput);
       case 'get_order_status':
@@ -176,5 +210,9 @@ export class ChatToolService {
       default:
         throw new BadRequestException(`Unknown tool: ${name}`);
     }
+  }
+
+  private isFlorCatalog() {
+    return this.configService.get<string>('catalog.provider') === 'flor';
   }
 }

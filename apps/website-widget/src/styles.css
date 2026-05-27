@@ -1,22 +1,31 @@
 :root {
   color-scheme: light;
   font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
-  background:
-    radial-gradient(circle at top right, rgba(214, 98, 44, 0.18), transparent 28%),
-    linear-gradient(180deg, #f6efe7 0%, #efe4d8 100%);
+  background: transparent;
   color: #1f1a17;
 }
 
+* {
+  box-sizing: border-box;
+}
+
+html,
 body {
   margin: 0;
+  width: 100%;
+  height: 100%;
   min-height: 100vh;
+  background: transparent;
+  overflow: hidden;
 }
 
 .widget-shell {
-  min-height: 100vh;
+  width: 100%;
+  height: 100vh;
   display: grid;
   place-items: end;
-  padding: 24px;
+  padding: 16px;
+  overflow: hidden;
 }
 
 .widget-launcher,
@@ -31,13 +40,36 @@ body {
 }
 
 .widget-launcher {
-  padding: 14px 18px;
+  width: 188px;
+  height: 60px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 0 20px;
   box-shadow: 0 18px 40px rgba(39, 28, 19, 0.24);
+  font-size: 16px;
+  font-weight: 700;
+  white-space: nowrap;
+  letter-spacing: 0;
+}
+
+.widget-launcher::before {
+  flex: 0 0 auto;
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #f0d0ad;
+  box-shadow: 0 0 0 4px rgba(240, 208, 173, 0.18);
 }
 
 .widget-panel {
-  width: min(100%, 420px);
-  height: min(85vh, 720px);
+  width: 100%;
+  max-width: 420px;
+  height: 100%;
+  max-height: 720px;
+  min-width: 0;
   display: grid;
   grid-template-rows: auto auto auto 1fr auto auto;
   gap: 12px;
@@ -53,11 +85,18 @@ body {
   justify-content: space-between;
   align-items: start;
   gap: 12px;
+  min-width: 0;
 }
 
 .widget-header h1,
 .widget-eyebrow {
   margin: 0;
+}
+
+.widget-header h1 {
+  font-size: 28px;
+  line-height: 1.08;
+  letter-spacing: 0;
 }
 
 .widget-eyebrow {
@@ -68,7 +107,12 @@ body {
 }
 
 .widget-close {
-  padding: 10px 14px;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  font-size: 22px;
+  line-height: 1;
 }
 
 .widget-name {
@@ -122,6 +166,7 @@ body {
   padding: 12px 14px;
   border-radius: 16px;
   line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 .widget-message-user {
@@ -159,12 +204,12 @@ body {
 
 @media (max-width: 640px) {
   .widget-shell {
-    padding: 12px;
+    padding: 10px;
   }
 
   .widget-panel {
-    width: 100%;
-    height: calc(100vh - 24px);
+    max-width: none;
+    max-height: none;
     border-radius: 18px;
   }
 }

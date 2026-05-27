@@ -236,7 +236,7 @@
 
 ### 7.1 Handoff для следующей сессии
 - **Сделано по ветке MVP:** Phase A–E в объёме выше; сиды: admin `admin@operon.local`, товары, курьер + `courier-dev-token`.
-- **Дев-порты:** API `3000`, widget `3001`, admin `3002`, courier `3003` (Vite `dev`, не прод).
+- **Дев-порты:** API `3004`, widget `3001`, admin `3002`, courier `3003` (Vite `dev`, не прод).
 - **Запуск:** `docker compose up -d` (Postgres + api); при необходимости `docker compose exec api pnpm --filter @operon/api prisma:seed`; фронты локально `pnpm --filter @operon/<app> dev` или внутри контейнера api (см. README).
 - **LLM:** `AI_PROVIDER=openai` + ключ — реальный OpenAI; `mock` — без сети, детерминированный сценарий.
 - **Review:** `REVIEW_DELAY_MINUTES` (по умолчанию 7); после `delivered` планируется сообщение в чат; админ: «Метрики», API `GET /api/admin/metrics`, ручной прогон очереди `POST /api/review/send`.

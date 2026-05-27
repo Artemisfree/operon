@@ -56,6 +56,8 @@ export class ChatOrchestratorService {
     );
     const systemPrompt = [
       behaviorPrompt.compiledPrompt,
+      this.buildExternalStorefrontPrompt(),
+      this.buildLanguagePrompt(input.customerMeta),
       this.buildKnownCustomerPrompt(conversation, input.customerMeta),
     ]
       .filter(Boolean)
@@ -237,6 +239,27 @@ export class ChatOrchestratorService {
     }
 
     return 'user';
+  }
+
+  private buildExternalStorefrontPrompt() {
+    return [
+      'Если подключён внешний storefront-каталог, инструменты возвращают реальные товары, варианты, цены и слоты доставки этого сайта.',
+      'Не выдумывай варианты, цены, даты доставки и номера заказов.',
+      'Если для товара есть variants, предложи клиенту выбрать вариант, если выбор влияет на заказ.',
+      'Для вопросов о доступном времени доставки используй list_delivery_slots.',
+    ].join(' ');
+  }
+
+  private buildLanguagePrompt(customerMeta?: Record<string, unknown>) {
+    if (customerMeta?.locale === 'en') {
+      return [
+        'For this website conversation, reply in English.',
+        'Use a polished, concise customer-service tone for a premium Dubai florist.',
+        'Do not switch to Russian unless the customer writes in Russian.',
+      ].join(' ');
+    }
+
+    return '';
   }
 
   private buildKnownCustomerPrompt(
