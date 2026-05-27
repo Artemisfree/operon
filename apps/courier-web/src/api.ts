@@ -1,5 +1,5 @@
 export function normalizeApiBaseUrl(input?: string) {
-  const fallback = 'http://localhost:3000/api';
+  const fallback = 'http://localhost:3004/api';
   const value = (input || fallback).trim();
   return value.endsWith('/') ? value.slice(0, -1) : value;
 }

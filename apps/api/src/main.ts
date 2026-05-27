@@ -16,7 +16,7 @@ const DEFAULT_DEV_CORS_ORIGINS = [
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  const port = Number(process.env.PORT ?? 3000);
+  const port = Number(process.env.PORT ?? 3004);
 
   const corsOrigins = process.env.CORS_ORIGINS
     ? process.env.CORS_ORIGINS.split(',').map((origin) => origin.trim())

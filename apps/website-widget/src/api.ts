@@ -12,7 +12,11 @@ export type ChatResponse = {
 };
 
 export function normalizeApiBaseUrl(input?: string) {
-  const fallback = 'http://localhost:3000/api';
+  const params =
+    typeof window === 'undefined'
+      ? new URLSearchParams()
+      : new URLSearchParams(window.location.search);
+  const fallback = params.get('apiBaseUrl') || 'http://localhost:3004/api';
   const value = (input || fallback).trim();
   return value.endsWith('/') ? value.slice(0, -1) : value;
 }
@@ -23,6 +27,7 @@ export async function postChatMessage(payload: {
   conversationId?: string;
   text: string;
   customerName?: string;
+  locale?: string;
 }) {
   const response = await fetch(`${API_BASE_URL}/chat/message`, {
     method: 'POST',
@@ -35,8 +40,11 @@ export async function postChatMessage(payload: {
       customer_meta: payload.customerName
         ? {
             name: payload.customerName,
+            locale: payload.locale,
           }
-        : undefined,
+        : payload.locale
+          ? { locale: payload.locale }
+          : undefined,
     }),
   });
 

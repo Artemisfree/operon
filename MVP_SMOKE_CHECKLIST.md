@@ -8,7 +8,7 @@
 
 - подняты `postgres` и `api`: `docker compose up --build -d`
 - загружены demo-данные: `docker compose exec api pnpm --filter @operon/api prisma:seed`
-- backend healthcheck отвечает: `GET http://localhost:3000/api/health`
+- backend healthcheck отвечает: `GET http://localhost:3004/api/health`
 - для локального UI подняты:
   - widget: `http://localhost:3001`
   - admin: `http://localhost:3002`
@@ -52,13 +52,13 @@
 ### 1. Healthcheck
 
 ```bash
-curl http://localhost:3000/api/health
+curl http://localhost:3004/api/health
 ```
 
 ### 2. Admin login
 
 ```bash
-curl -X POST http://localhost:3000/api/admin/auth/login \
+curl -X POST http://localhost:3004/api/admin/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "admin@operon.local",
@@ -69,7 +69,7 @@ curl -X POST http://localhost:3000/api/admin/auth/login \
 ### 3. Chat order creation
 
 ```bash
-curl -X POST http://localhost:3000/api/chat/message \
+curl -X POST http://localhost:3004/api/chat/message \
   -H "Content-Type: application/json" \
   -d '{
     "text": "Хочу заказать 2 Капучино 300 мл. Телефон: +79990000000. Адрес: Москва, Тверская 1. Подтверждаю заказ.",
@@ -82,13 +82,13 @@ curl -X POST http://localhost:3000/api/chat/message \
 ### 4. Widget polling
 
 ```bash
-curl http://localhost:3000/api/chat/conversations/<conversation_id>/messages
+curl http://localhost:3004/api/chat/conversations/<conversation_id>/messages
 ```
 
 ### 5. Review processing
 
 ```bash
-curl -X POST http://localhost:3000/api/review/send \
+curl -X POST http://localhost:3004/api/review/send \
   -H "Authorization: Bearer <admin_jwt>"
 ```
 

@@ -24,7 +24,7 @@ export const CHAT_TOOL_DEFINITIONS = [
     function: {
       name: 'create_order',
       description:
-        'Creates an order after product, quantity, address, phone, and confirmation are collected.',
+        'Creates an order after product, quantity, address, phone, delivery slot when available, and confirmation are collected.',
       parameters: {
         type: 'object',
         properties: {
@@ -32,6 +32,18 @@ export const CHAT_TOOL_DEFINITIONS = [
           customerPhone: { type: 'string' },
           deliveryAddress: { type: 'string' },
           comment: { type: 'string' },
+          deliveryDate: {
+            type: 'string',
+            description: 'ISO datetime for delivery date if the storefront requires slots.',
+          },
+          deliverySlotStart: {
+            type: 'string',
+            description: 'ISO datetime for selected delivery slot start.',
+          },
+          deliverySlotEnd: {
+            type: 'string',
+            description: 'ISO datetime for selected delivery slot end.',
+          },
           confirmed: { type: 'boolean' },
           items: {
             type: 'array',
@@ -39,6 +51,10 @@ export const CHAT_TOOL_DEFINITIONS = [
               type: 'object',
               properties: {
                 productQuery: { type: 'string' },
+                variantQuery: {
+                  type: 'string',
+                  description: 'Product variant name or size, when the catalog has variants.',
+                },
                 quantity: { type: 'integer' },
               },
               required: ['productQuery', 'quantity'],
@@ -52,6 +68,25 @@ export const CHAT_TOOL_DEFINITIONS = [
           'confirmed',
           'items',
         ],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'list_delivery_slots',
+      description:
+        'Returns available delivery slots for the connected storefront when the user asks about delivery time or a delivery slot is needed.',
+      parameters: {
+        type: 'object',
+        properties: {
+          days: {
+            type: 'integer',
+            description: 'How many days to check, from today.',
+          },
+        },
+        required: ['days'],
         additionalProperties: false,
       },
     },
@@ -114,6 +149,7 @@ export const AI_SYSTEM_PROMPT = `
 - количество
 - адрес доставки
 - телефон
+- если клиент выбирает дату/время доставки, используй list_delivery_slots и не выдумывай слоты
 - явное подтверждение клиента
 Если пользователь просит человека, оператора или ручной перехват, немедленно используй start_handoff.
 Если обязательных полей не хватает, задай короткий уточняющий вопрос и не вызывай create_order.

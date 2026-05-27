@@ -9,4 +9,4 @@ COPY apps/api/package.json ./apps/api/package.json
 
 RUN corepack enable
 
-EXPOSE 3000
+EXPOSE 3004

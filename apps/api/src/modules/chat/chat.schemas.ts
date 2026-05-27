@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const customerMetaSchema = z.object({
   name: z.string().trim().min(1).max(120).optional(),
   phone: z.string().trim().min(6).max(32).optional(),
+  locale: z.enum(['en', 'ru']).optional(),
 }).optional();
 
 export const chatMessageSchema = z.object({
